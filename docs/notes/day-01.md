@@ -80,6 +80,14 @@ It compounds with Next Token Prediction: a guess delivered in a certain voice.
 - Product features (search, citations, constrained output, generator–verifier loops) push the limit outward; they do not remove it.
 - 4D: NTP is the foundation of Discernment. Read output → highlight the specific → verify only that.
 
+### Lesson 5 — Markov simulator
+- Training = tallying which word follows which. No understanding, just counts.
+- Sampling = pick the next word from a probability row. Same context, different runs → different output (ship 50% / wait 50%).
+- Knobs: temperature (sharpen/flatten), top-k (N best), top-p (cumulative mass). Same knobs developers pass to Claude.
+- Markov vs LLM: context = last word vs whole conversation; distribution = table lookup vs forward pass; sampling step = identical.
+- Why the toy can't fabricate but Claude can: the toy looks up a row that only has seen cells; Claude runs a learned function that assigns probability to every token, including combinations never seen in that context. Generalization is both the power and the hallucination.
+- 1906 Markov → 2010 phone n-grams → 2017 transformers. Upgraded counting, not magic.
+
 ### Exercise: Verification Test (LangGraph JS)
 - Probe 1 (explain state graph): 791 words, fluent, answered in Python although the question was about JS. NTP picks the most common language in training data. Prompt must say "JS".
 - Probe 2/3 with web search: 4/5 confirmed, item 3 (JS version that introduced interrupt) explicitly "couldn't verify"; separated Python 0.2.47 (sourced) from JS. Also corrected two wrong assumptions in the prompt (StateGraph is a class; no dedicated resume method).
