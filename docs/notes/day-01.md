@@ -69,3 +69,26 @@ It compounds with Next Token Prediction: a guess delivered in a certain voice.
 - Sycophancy was not triggered here. Untested on vague or taste-based questions; do not generalize.
 - "Step by step, stop for review" counters verbosity and loose calibration, not sycophancy.
 - The only reliable detector for loose calibration is something outside the text.
+
+## Lessons 4–5 — Next Token Prediction
+
+### Mechanism
+- Autocomplete at scale, not a search engine. Writes word by word by "what tends to follow what" (lesson 5 Markov simulator shows the same mechanism at toy scale).
+- One mechanism → fluency AND hallucination. Both feel identical on screen.
+- Fabrication concentrates in specificity: names, dates, numbers, versions, flags, API names, URLs, quotes. The more precise the claim, the more it needs verification.
+- Sampling: same prompt, different runs. Stable parts = strong pattern; varying parts = low confidence.
+- Product features (search, citations, constrained output, generator–verifier loops) push the limit outward; they do not remove it.
+- 4D: NTP is the foundation of Discernment. Read output → highlight the specific → verify only that.
+
+### Exercise: Verification Test (LangGraph JS)
+- Probe 1 (explain state graph): 791 words, fluent, answered in Python although the question was about JS. NTP picks the most common language in training data. Prompt must say "JS".
+- Probe 2/3 with web search: 4/5 confirmed, item 3 (JS version that introduced interrupt) explicitly "couldn't verify"; separated Python 0.2.47 (sourced) from JS. Also corrected two wrong assumptions in the prompt (StateGraph is a class; no dedicated resume method).
+- Probe from memory only: 4/5. Gave specific versions (JS 0.2.31 "low confidence", Python 0.2.57) — Python number differs from the sourced 0.2.47. Miss landed exactly on the most specific item.
+- Self-reported confidence matched the error this time: the only "low confidence" item was the wrong one. Useful signal, not a guarantee.
+- Consistent across runs: package name, StateGraph, resume via invoke + new Command({ resume }), docs URL. Varied: version numbers.
+
+### Takeaways
+- Every version number, flag, function name, URL in output = a guess until checked.
+- Consistency across runs = familiar, not = true. Trust more, still check.
+- With search on, the model is willing to say "not verified". Without it, it fills the gap with a plausible number.
+- Always state the language/stack in the prompt; the default is the most common one, not yours.
