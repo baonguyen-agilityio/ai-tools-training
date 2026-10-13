@@ -1,53 +1,41 @@
-# Day 01 — Notes
+# Day 01 — AI capabilities and limitations (lessons 1–2)
 
-## Rule of the day
-Before accepting any output: which case was never mentioned in the prompt?
+## The one idea
+Claude does not "know" or "not know". It predicts the next token from patterns.
+When a task looks like thousands it has seen, the guess is right. When a task is
+rare, internal, new, or vague, the guess *sounds* right and may be wrong.
+Both cases look identical on screen. The model does not know when it is guessing.
 
-## Course: AI capabilities and limitations
+## The four ways a task lands in "guessing" territory
+| Zone | Property | Signal | Observed case | How to compensate |
+|------|----------|--------|---------------|-------------------|
+| New ground | Next Token Prediction | few patterns, needs real reasoning | invented "Jonh" instead of using the given `bob'a` | ask for hypotheses + how to verify, then run it |
+| Doesn't know | Knowledge | niche lib, specific version, internal data | useInterrupt API from a different version; which "John" out of two | give context, docs, version; when ambiguous, make it ask |
+| Forgets | Working Memory | long chat, many hops, expecting cross-session memory | summary of a summary across parent/child agents | short sessions, paste context again, CLAUDE.md later |
+| Loose instruction | Steerability | vague request, model interprets | "verify E2E" → easiest passing path; "issues this morning" → all, not assigned | name the case, the scope, the format |
 
-### Lesson 1 — Intro
-- 4D = human skills. 4 properties = machine properties. One system.
-- NTP (where answers come from) / Knowledge (what it knows) / Working Memory (what it attends to) / Steerability (how much control I have)
-- Each property is a continuum capability → limitation. Locate the task on the continuum; don't trust or distrust wholesale.
-- Properties are stable; boundaries shift with each model.
+Same mechanism gives both the capability and the limitation; one cannot be turned off without the other.
+Calibrated trust = locate the task in the table, not trust/distrust wholesale.
 
-### Exercise: 6 tasks from the last two weeks
-| # | Task | Result | Case never mentioned |
-|---|------|--------|----------------------|
-| 1 | Design multi-agent context filtering | needed rework | parent had already summarized |
-| 2 | Debug suggestion chips + lookup with typo | needed rework | input containing an apostrophe |
-| 3 | Duplicate-name lookup returns wrong person | needed rework | two people with the same name → must ask, not patch the prompt |
-| 4 | useInterrupt with LangGraph | needed rework | API differs by version/package, must verify |
-| 5 | Verify E2E "view X's timeoff" locally | right first try, 1 of 2 paths | normal-user path never tested |
-| 6 | Filter issues doable this morning | needed rework | scope: mine vs all |
+## The one habit
+Before accepting any output: **which case was not mentioned?**
+All 6 recent failures were: correct for the mentioned case, wrong for the unmentioned one.
 
-6 failures, 1 cause: correct for the cases mentioned, wrong for the cases nobody mentioned.
+## Why generative errors are harder to catch than classification errors (lesson 2)
+- Classification output carries a label that can be checked (Face ID accept/reject, a recommendation that is off). Generative output is prose that reads the same whether right or wrong.
+- Generative vs classification is about the mechanism, not the UI: IntelliSense (ranking) vs Copilot (generating); old Siri (intent classification + template) vs LLM Siri.
+- The riskiest output is the one someone else acts on (a bug ticket), not the one rejected on the spot (autocomplete).
 
-### Fingerprints observed
-- NTP invents detail: I said `bob'a`, it made up "Jonh→John". Pushed back → real fix, no sycophancy.
-- I fell for "PASS = done" myself on task 5.
+## Evidence: 6 tasks from the last two weeks
+| # | Task | Result | Unmentioned case | Zone |
+|---|------|--------|------------------|------|
+| 1 | Multi-agent context filtering | rework | parent had already summarized | WM |
+| 2 | Suggestion chips + typo `bob'a` | rework | apostrophe | NTP |
+| 3 | Duplicate-name lookup | rework | two people, must ask not patch prompt | Knowledge + NTP |
+| 4 | useInterrupt with LangGraph | rework | API differs by version | Knowledge |
+| 5 | Verify E2E "view X's timeoff" | pass, 1 of 2 paths | normal-user path | Steerability |
+| 6 | Filter issues for this morning | rework | assigned vs all | Steerability |
 
-### Check questions
-- Reading the diff before commit = Discernment, compensates NTP. Forcing small steps = Delegation, compensates Steerability.
-- `node --test tests/` was wrong = Knowledge (version-specific) + NTP (old common pattern). Fix = run it.
-
-### Lesson 2 — What we mean by AI
-- Classification (sorts existing content) vs generative (produces new tokens). This course = generative.
-- Classification errors are visible and measurable. Generative errors read fluently; only a human reader catches them.
-- Reference card: 4 properties × continuum left (trust) / right (verify). The further right, the more you verify and compensate.
-- Same mechanism produces both capability and limitation. Can't keep one without the other.
-- Calibrated trust = locate the task on the continuum, not trust/distrust wholesale.
-- Generative vs classification is about the mechanism, not the UI. Many products chain both (IntelliSense vs Copilot; old Siri vs LLM Siri).
-- Generative errors hurt most when someone ELSE consumes the output (a bug ticket) rather than when you reject it yourself (autocomplete).
-
-#### Exercise
-- 5 features: 5/5 correct; borderline = autocomplete and Siri.
-- Riskiest: bug ticket, all four properties apply.
-- 6 tasks tagged: 1 WM · 2 NTP · 3 Knowledge+NTP · 4 Knowledge · 5 Steerability · 6 Steerability
-- #3: missing fact + NTP picks confidently → fix = ask, not a better prompt.
-- #5: "verify E2E" was loose → model chose the easiest passing path. The instruction was the bug.
-
-#### Check questions
-- Claude's errors are harder to spot than a spam filter's: no label comes with the output.
-- "Why is this test flaky in CI" is right on NTP and Knowledge; add CI context (Knowledge) AND ask for hypotheses with verification steps (NTP).
-- To stop "Jonh"-style invention: adjust Steerability (concrete instruction), not NTP (can't change the mechanism).
+## Fingerprints observed first-hand
+- NTP fills gaps with familiar patterns ("Jonh"). Pushing back produced a real fix, no sycophancy.
+- "PASS = done" on #5 was a human error: the instruction was the bug, not the model.
