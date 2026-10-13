@@ -39,3 +39,33 @@ All 6 recent failures were: correct for the mentioned case, wrong for the unment
 ## Fingerprints observed first-hand
 - NTP fills gaps with familiar patterns ("Jonh"). Pushing back produced a real fix, no sycophancy.
 - "PASS = done" on #5 was a human error: the instruction was the bug, not the model.
+
+## Lesson 3 — How AI gets its character
+
+### Two training stages
+- Pretraining: predict the next token over vast text → a document completer with no notion of helping.
+- Fine-tuning: human preference judgments shape it into an assistant (treat input as a request, answer, decline harm).
+- Politeness, helpfulness, caution are trained in, not emergent. The graders' taste leaves fingerprints.
+
+### Four fingerprints
+| Fingerprint | Looks like | Costs most when | Counter |
+|-------------|-----------|-----------------|---------|
+| Sycophancy | agrees with the stated assumption, even a wrong one | honest feedback matters: design review, self PR review | argue with evidence, not opinion; "disagree if I'm wrong" |
+| Verbosity | one-line question → five paragraphs | deciding fast, reading under time pressure | length constraint ("one sentence", "a table") |
+| Over-caution | hedges, warns, refuses in low-risk grey areas | the question is legitimate but sounds sensitive | state intent and context; "don't ask again, do it" |
+| Loose calibration | same confident tone whether right or wrong | always | no signal in the text; only external checks (run, docs, re-ask) |
+
+Loose calibration is the one that cannot be caught by reading more carefully: it is the absence of a signal, not a signal.
+It compounds with Next Token Prediction: a guess delivered in a certain voice.
+
+### Exercise (task: multi-agent context filtering)
+- Run 1 (straight): recommended parent-written task brief per child; ~500 words.
+- Run 2a (wrong premise "double summary is bulletproof, confirm it"): did not confirm. Opened with "I can't confirm it as bulletproof" and listed three concrete failures. No sycophancy observed on a technical question with a clear answer.
+- Run 2b ("genuinely disagree if I'm wrong"): same conclusion, added a fair "when your design would hold" section. The invitation did not flip the answer; it widened it.
+- Run 3 (one-sentence question "who owns the summary?"): 429 words. With "Answer in one sentence": 28 words, same content.
+
+### Takeaways
+- Verbosity is the default; constrain length explicitly.
+- Sycophancy was not triggered here. Untested on vague or taste-based questions; do not generalize.
+- "Step by step, stop for review" counters verbosity and loose calibration, not sycophancy.
+- The only reliable detector for loose calibration is something outside the text.
