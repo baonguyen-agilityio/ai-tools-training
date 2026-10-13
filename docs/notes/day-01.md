@@ -30,3 +30,24 @@ Before accepting any output: which case was never mentioned in the prompt?
 ### Check questions
 - Reading the diff before commit = Discernment, compensates NTP. Forcing small steps = Delegation, compensates Steerability.
 - `node --test tests/` was wrong = Knowledge (version-specific) + NTP (old common pattern). Fix = run it.
+
+### Lesson 2 — What we mean by AI
+- Classification (sorts existing content) vs generative (produces new tokens). This course = generative.
+- Classification errors are visible and measurable. Generative errors read fluently; only a human reader catches them.
+- Reference card: 4 properties × continuum left (trust) / right (verify). The further right, the more you verify and compensate.
+- Same mechanism produces both capability and limitation. Can't keep one without the other.
+- Calibrated trust = locate the task on the continuum, not trust/distrust wholesale.
+- Generative vs classification is about the mechanism, not the UI. Many products chain both (IntelliSense vs Copilot; old Siri vs LLM Siri).
+- Generative errors hurt most when someone ELSE consumes the output (a bug ticket) rather than when you reject it yourself (autocomplete).
+
+#### Exercise
+- 5 features: 5/5 correct; borderline = autocomplete and Siri.
+- Riskiest: bug ticket, all four properties apply.
+- 6 tasks tagged: 1 WM · 2 NTP · 3 Knowledge+NTP · 4 Knowledge · 5 Steerability · 6 Steerability
+- #3: missing fact + NTP picks confidently → fix = ask, not a better prompt.
+- #5: "verify E2E" was loose → model chose the easiest passing path. The instruction was the bug.
+
+#### Check questions
+- Claude's errors are harder to spot than a spam filter's: no label comes with the output.
+- "Why is this test flaky in CI" is right on NTP and Knowledge; add CI context (Knowledge) AND ask for hypotheses with verification steps (NTP).
+- To stop "Jonh"-style invention: adjust Steerability (concrete instruction), not NTP (can't change the mechanism).
