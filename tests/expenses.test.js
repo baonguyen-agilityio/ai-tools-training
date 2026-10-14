@@ -95,6 +95,9 @@ test('summary: an expense dated the 1st stays in its month regardless of process
     const jan = summary(seed, '2026-01');
     assert.equal(jan.total, 186.25);
     assert.deepEqual(jan.byCategory, { food: 21.25, transport: 45, bills: 120 });
+    const feb = summary(seed, '2026-02');
+    assert.equal(feb.total, 315.29);
+    assert.equal(feb.byCategory.food, 40.09);
   } finally {
     if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
   }
