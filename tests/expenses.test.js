@@ -49,6 +49,12 @@ test('list: honors limit and category filter', () => {
   assert.ok(food.items.every((e) => e.category === 'food'));
 });
 
+test('list: second page returns the remaining oldest items', () => {
+  const out = list(seed, { page: 2, limit: 10 });
+  assert.equal(out.items.length, 2);
+  assert.deepEqual(out.items.map((e) => e.date), ['2026-01-10', '2026-01-03']);
+});
+
 test('summary: totals one month by category', () => {
   const out = summary(seed, '2026-01');
   assert.equal(out.total, 186.25);
