@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto';
  */
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** Round to cents; avoids float drift in stored amounts and sums. */
+/** Round a user-supplied amount to cents. */
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
