@@ -23,3 +23,8 @@
 - Rebase rewrites hashes; review replies pointing at pre-rebase commits are normal.
 - Reviewer and author were the same account: acceptable for solo training, a flag in a team.
 - Conflict resolution by Claude is safe when the prompt states what both sides must keep and asks for the hunk before writing.
+
+## Evidence
+- PR #9 description (merged): https://drive.google.com/file/d/1UaRJ6mnh3U3WoMl0c4S_Ag9fYZt1xnaS/view
+- PR #9 review comments: https://drive.google.com/file/d/16-5Wh1LJIV7k4Ip8Co1pu54sQtyMihS4/view
+- PR #9 CI green: https://drive.google.com/file/d/12R-V1zgHOYnhEgDGpGeRqRnZirYiURp5/view
