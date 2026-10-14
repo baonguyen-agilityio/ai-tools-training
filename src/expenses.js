@@ -79,11 +79,10 @@ export function list(expenses, { page = 1, limit = 10, category } = {}) {
  * @returns {{ month: string, total: number, byCategory: Record<string, number> }}
  */
 export function summary(expenses, month) {
-  const inMonth = expenses.filter((e) => {
-    const d = new Date(e.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    return key === month;
-  });
+  // Compare the YYYY-MM prefix as text: parsing a date-only string yields UTC
+  // midnight, and reading it back in local time shifts the 1st into the
+  // previous month west of UTC.
+  const inMonth = expenses.filter((e) => e.date.slice(0, 7) === month);
   // Sum in integer cents so float drift never reaches the result.
   let cents = 0;
   /** @type {Record<string, number>} */
