@@ -44,6 +44,13 @@ test('GET /api/expenses filters by category and honors limit', async () => {
   assert.equal(body.items.length, 2);
 });
 
+test('GET /api/expenses returns the remaining items on page 2', async () => {
+  const body = await (await api('/api/expenses?page=2&limit=10')).json();
+  assert.equal(body.page, 2);
+  assert.equal(body.items.length, 2);
+  assert.deepEqual(body.items.map((e) => e.id), ['a2', 'a1']);
+});
+
 test('GET /api/expenses rejects bad paging', async () => {
   assert.equal((await api('/api/expenses?page=0')).status, 400);
   assert.equal((await api('/api/expenses?limit=abc')).status, 400);
