@@ -84,13 +84,17 @@ export function summary(expenses, month) {
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     return key === month;
   });
-  let total = 0;
+  // Sum in integer cents so float drift never reaches the result.
+  let cents = 0;
+  /** @type {Record<string, number>} */
+  const centsByCategory = {};
+  for (const e of inMonth) {
+    const c = Math.round(e.amount * 100);
+    cents += c;
+    centsByCategory[e.category] = (centsByCategory[e.category] ?? 0) + c;
+  }
   /** @type {Record<string, number>} */
   const byCategory = {};
-  for (const e of inMonth) {
-    total += e.amount;
-    byCategory[e.category] = (byCategory[e.category] ?? 0) + e.amount;
-  }
-  for (const k in byCategory) byCategory[k] = round2(byCategory[k]);
-  return { month, total: round2(total), byCategory };
+  for (const k in centsByCategory) byCategory[k] = centsByCategory[k] / 100;
+  return { month, total: cents / 100, byCategory };
 }
