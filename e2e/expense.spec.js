@@ -10,6 +10,11 @@ test('lists seeded expenses newest first with paging info', async ({ page }) => 
   await expect(rows).toHaveCount(10);
   await expect(rows.first()).toContainText('2026-03-15');
   await expect(page.getByTestId('page-info')).toHaveText('Page 1 of 2 (12 total)');
+
+  await page.getByTestId('page-next').click();
+  await expect(rows).toHaveCount(2);
+  await expect(page.getByTestId('page-info')).toHaveText('Page 2 of 2 (12 total)');
+  await expect(page.getByTestId('page-next')).toBeDisabled();
 });
 
 test('filters by category', async ({ page }) => {

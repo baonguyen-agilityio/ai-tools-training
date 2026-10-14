@@ -55,6 +55,17 @@ test('list: second page returns the remaining oldest items', () => {
   assert.deepEqual(out.items.map((e) => e.date), ['2026-01-10', '2026-01-03']);
 });
 
+test('list: full middle page and short last page with a small limit', () => {
+  const p2 = list(seed, { page: 2, limit: 5 });
+  assert.deepEqual(
+    p2.items.map((e) => e.date),
+    ['2026-02-14', '2026-02-05', '2026-02-01', '2026-01-28', '2026-01-15'],
+  );
+  const p3 = list(seed, { page: 3, limit: 5 });
+  assert.deepEqual(p3.items.map((e) => e.date), ['2026-01-10', '2026-01-03']);
+  assert.equal(p3.total, 12);
+});
+
 test('summary: totals one month by category', () => {
   const out = summary(seed, '2026-01');
   assert.equal(out.total, 186.25);
