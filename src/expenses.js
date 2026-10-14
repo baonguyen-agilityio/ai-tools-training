@@ -12,6 +12,8 @@ import { randomUUID } from 'node:crypto';
  */
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Round to cents; avoids float drift in stored amounts and sums. */
+const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
  * Validate and normalize user input into an Expense (without id).
@@ -31,7 +33,7 @@ export function validate(input) {
   const category = String(input.category ?? '').trim().toLowerCase();
   if (!category) throw new Error('category is required');
   const note = String(input.note ?? '').trim();
-  return { date, amount: Math.round(amount * 100) / 100, category, note };
+  return { date, amount: round2(amount), category, note };
 }
 
 /**
@@ -89,5 +91,6 @@ export function summary(expenses, month) {
     total += e.amount;
     byCategory[e.category] = (byCategory[e.category] ?? 0) + e.amount;
   }
-  return { month, total, byCategory };
+  for (const k in byCategory) byCategory[k] = round2(byCategory[k]);
+  return { month, total: round2(total), byCategory };
 }

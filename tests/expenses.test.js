@@ -75,3 +75,15 @@ test('summary: totals one month by category', () => {
 test('summary: empty month', () => {
   assert.deepEqual(summary(seed, '2025-12'), { month: '2025-12', total: 0, byCategory: {} });
 });
+
+test('summary: totals have at most 2 decimals (BUG-002)', () => {
+  const feb = summary(seed, '2026-02');
+  assert.equal(feb.total, 315.29);
+  assert.deepEqual(feb.byCategory, { food: 40.09, transport: 15.2, fun: 60, bills: 200 });
+
+  const drift = [
+    { id: 'x1', date: '2026-04-01', amount: 0.1, category: 'misc', note: '' },
+    { id: 'x2', date: '2026-04-02', amount: 0.2, category: 'misc', note: '' },
+  ];
+  assert.deepEqual(summary(drift, '2026-04'), { month: '2026-04', total: 0.3, byCategory: { misc: 0.3 } });
+});
