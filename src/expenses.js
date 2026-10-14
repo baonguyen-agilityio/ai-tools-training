@@ -67,7 +67,7 @@ export function list(expenses, { page = 1, limit = 10, category } = {}) {
   const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
   const offset = (page - 1) * limit;
   const hasMore = offset + limit < sorted.length;
-  return { items: sorted.slice(offset, limit), page, limit, total: sorted.length, hasMore };
+  return { items: sorted.slice(offset, offset + limit), page, limit, total: sorted.length, hasMore };
 }
 
 /**
