@@ -12,6 +12,8 @@ import { randomUUID } from 'node:crypto';
  */
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Round a user-supplied amount to cents. */
+const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
  * Validate and normalize user input into an Expense (without id).
@@ -31,7 +33,7 @@ export function validate(input) {
   const category = String(input.category ?? '').trim().toLowerCase();
   if (!category) throw new Error('category is required');
   const note = String(input.note ?? '').trim();
-  return { date, amount: Math.round(amount * 100) / 100, category, note };
+  return { date, amount: round2(amount), category, note };
 }
 
 /**
@@ -82,12 +84,17 @@ export function summary(expenses, month) {
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     return key === month;
   });
-  let total = 0;
+  // Sum in integer cents so float drift never reaches the result.
+  let cents = 0;
+  /** @type {Record<string, number>} */
+  const centsByCategory = {};
+  for (const e of inMonth) {
+    const c = Math.round(e.amount * 100);
+    cents += c;
+    centsByCategory[e.category] = (centsByCategory[e.category] ?? 0) + c;
+  }
   /** @type {Record<string, number>} */
   const byCategory = {};
-  for (const e of inMonth) {
-    total += e.amount;
-    byCategory[e.category] = (byCategory[e.category] ?? 0) + e.amount;
-  }
-  return { month, total, byCategory };
+  for (const k in centsByCategory) byCategory[k] = centsByCategory[k] / 100;
+  return { month, total: cents / 100, byCategory };
 }

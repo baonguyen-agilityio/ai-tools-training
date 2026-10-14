@@ -94,6 +94,12 @@ test('GET /api/summary totals one month', async () => {
   assert.deepEqual(body.byCategory, { food: 21.25, transport: 45, bills: 120 });
 });
 
+test('GET /api/summary returns cent-exact totals for a drifting month', async () => {
+  const body = await (await api('/api/summary?month=2026-02')).json();
+  assert.equal(body.total, 315.29);
+  assert.deepEqual(body.byCategory, { food: 40.09, transport: 15.2, fun: 60, bills: 200 });
+});
+
 test('GET /api/summary requires month', async () => {
   assert.equal((await api('/api/summary')).status, 400);
   assert.equal((await api('/api/summary?month=2026-1')).status, 400);
