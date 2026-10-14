@@ -100,3 +100,15 @@ It compounds with Next Token Prediction: a guess delivered in a certain voice.
 - Consistency across runs = familiar, not = true. Trust more, still check.
 - With search on, the model is willing to say "not verified". Without it, it fills the gap with a plausible number.
 - Always state the language/stack in the prompt; the default is the most common one, not yours.
+
+## Lessons 6–13 — Knowledge, Working Memory, Steerability, Collide (fast pass)
+| Property | What it is | Failure shape | Compensate |
+|---|---|---|---|
+| Knowledge | Knows only training data, frozen at cutoff. Ask "how well-represented?", not "does it know?" | stale-as-current; uneven coverage with the same tone; common case treated as default; no attribution | paste when the need is known; connector/MCP/search when it must be found. Retrieval = embed → nearest → into context |
+| Working Memory | Attends only to the current context. No cross-session memory (the cliff) | long chat drops or blends early turns; mid-document detail skimmed; expecting it to remember yesterday | short single-topic sessions; re-paste what matters; put key info first or last; CLAUDE.md for cross-session facts |
+| Steerability | How much an instruction actually controls | short, concrete, checkable → holds; long, abstract, precision-critical → drifts and self-interprets | split; one checkable constraint per instruction; examples over descriptions; plan before act |
+| Collide | Real tasks hit ≥2 properties at once | "why is this flaky in CI" = NTP + Knowledge + Steerability | diagnose which kind of wrong, then compensate that property; no generic retry |
+
+Habits: which case did I not mention? · which claim is specific? · which context does it not have?
+
+Day 1 closed 2026-10-14. Quiz and Claude 101 (projects/artifacts) deferred to spare time.
