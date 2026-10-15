@@ -77,6 +77,7 @@ form.addEventListener('submit', async (ev) => {
       body: JSON.stringify(input),
     });
     form.reset();
+    await Promise.all([loadList(), loadSummary()]);
   } catch (err) {
     formError.textContent = err.message;
     formError.hidden = false;
