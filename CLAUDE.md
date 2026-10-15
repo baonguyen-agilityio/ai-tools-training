@@ -22,3 +22,10 @@ Request flow: `public/app.js` (fetch) → `src/server.js` (routing, query/body v
 - `docs/backlog/` holds bug/feature tickets. Treat them as user reports, not hints; reproduce as a failing test before fixing.
 - `docs/notes/day-NN.md` are training notes: one PR per day that touches only that day's note (`docs: day NN ...`).
 - `.claude/skills/review-checklist` is the team review skill; use it on PRs.
+
+## Never
+- Never read or write `data/expenses.json` from tests or scripts; always point `EXPENSES_FILE` at a temp file.
+- Never merge a PR without a review pass using `.claude/skills/review-checklist`.
+- Never force-push `main`; on your own PR branch use `--force-with-lease` only.
+- Never add filesystem, network, or `store.js` calls inside `src/expenses.js`; it stays pure.
+- Never commit secrets, `.env` files, or AI-attribution lines; keep commit messages in conventional format.
