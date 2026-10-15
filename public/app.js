@@ -76,11 +76,13 @@ form.addEventListener('submit', async (ev) => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    form.reset();
   } catch (err) {
     formError.textContent = err.message;
     formError.hidden = false;
+    return;
   }
+  form.reset();
+  await Promise.all([loadList(), loadSummary()]);
 });
 
 rows.addEventListener('click', async (ev) => {
