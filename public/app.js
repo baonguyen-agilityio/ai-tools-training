@@ -29,7 +29,7 @@ async function loadList() {
       tr.innerHTML = `
         <td>${e.date}</td>
         <td class="amount">${e.amount}</td>
-        <td>${e.category}</td>
+        <td>${escapeHtml(e.category)}</td>
         <td>${escapeHtml(e.note)}</td>
         <td><button type="button" data-testid="delete-btn" data-id="${e.id}">Delete</button></td>`;
       return tr;
