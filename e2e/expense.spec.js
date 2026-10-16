@@ -97,6 +97,20 @@ test('renders category text literally, never as HTML', async ({ page }) => {
   }
 });
 
+test('renders every list field literally, even values the server would reject', async ({ page }) => {
+  const forged = { id: '"><b>id</b>', date: '<b>2026-03-21</b>', amount: '<b>1</b>', category: 'food', note: 'E2E forged' };
+  await page.route(/\/api\/expenses\?/, (route) =>
+    route.fulfill({ json: { items: [forged], total: 1, page: 1, limit: 10 } }));
+  await page.reload();
+
+  const row = page.getByTestId('expense-row');
+  await expect(row).toHaveCount(1);
+  await expect(row.locator('td:nth-child(1)')).toHaveText(forged.date);
+  await expect(row.locator('td:nth-child(2)')).toHaveText(forged.amount);
+  await expect(row.getByTestId('delete-btn')).toHaveAttribute('data-id', forged.id);
+  await expect(row.locator('b')).toHaveCount(0);
+});
+
 test('deletes an expense', async ({ page }) => {
   const first = page.getByTestId('expense-row').first();
   const note = await first.locator('td:nth-child(4)').textContent();
