@@ -88,7 +88,11 @@ form.addEventListener('submit', async (ev) => {
 rows.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('[data-testid="delete-btn"]');
   if (!btn) return;
-  await api(`/api/expenses/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
+  try {
+    await api(`/api/expenses/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
+  } catch {
+    // Already gone (stale page, double-click) or failed: the refresh shows the real state.
+  }
   await Promise.all([loadList(), loadSummary()]);
 });
 

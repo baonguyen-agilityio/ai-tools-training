@@ -88,6 +88,15 @@ test('DELETE /api/expenses/:id removes the expense', async () => {
   assert.ok(!store.load().some((e) => e.id === 'a1'));
 });
 
+test('DELETE /api/expenses/:id returns 404 when nothing was removed', async () => {
+  assert.equal((await api('/api/expenses/a1', { method: 'DELETE' })).status, 200);
+  for (const id of ['a1', 'does-not-exist']) {
+    const res = await api(`/api/expenses/${id}`, { method: 'DELETE' });
+    assert.equal(res.status, 404);
+    assert.ok((await res.json()).error);
+  }
+});
+
 test('GET /api/summary totals one month', async () => {
   const body = await (await api('/api/summary?month=2026-01')).json();
   assert.equal(body.total, 186.25);

@@ -118,3 +118,23 @@ test('deletes an expense', async ({ page }) => {
   await expect(page.getByTestId('expense-row').filter({ hasText: note })).toHaveCount(0);
   await expect(page.getByTestId('page-info')).toContainText('(12 total)');
 });
+
+test('deleting an already-deleted expense still refreshes list and summary', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const res = await page.request.post('/api/expenses', {
+    data: { date: '2026-04-01', amount: 7, category: 'food', note: 'E2E stale' },
+  });
+  const { id } = await res.json();
+  await page.reload();
+  await page.getByTestId('summary-month').fill('2026-04');
+  await expect(page.getByTestId('summary-total')).toHaveText('7');
+
+  // Removed elsewhere (another tab, double-click) while this page still shows it.
+  await page.request.delete(`/api/expenses/${id}`);
+  await page.getByTestId('expense-row').filter({ hasText: 'E2E stale' }).getByTestId('delete-btn').click();
+
+  await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E stale' })).toHaveCount(0);
+  await expect(page.getByTestId('summary-total')).toHaveText('0');
+  expect(errors).toEqual([]);
+});
