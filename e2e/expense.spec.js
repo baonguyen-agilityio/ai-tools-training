@@ -138,3 +138,19 @@ test('deleting an already-deleted expense still refreshes list and summary', asy
   await expect(page.getByTestId('summary-total')).toHaveText('0');
   expect(errors).toEqual([]);
 });
+
+test('a failed delete keeps the row and does not swallow the error', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.route(/\/api\/expenses\/[^/?]+$/, (route) =>
+    route.request().method() === 'DELETE'
+      ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"internal error"}' })
+      : route.fallback(),
+  );
+  const row = page.getByTestId('expense-row').first();
+  const id = await row.getAttribute('data-id');
+  await row.getByTestId('delete-btn').click();
+
+  await expect.poll(() => errors).toEqual(['internal error']);
+  await expect(page.locator(`[data-testid="expense-row"][data-id="${id}"]`)).toHaveCount(1);
+});
