@@ -10,6 +10,8 @@ const READ_ONLY = new Set(['cat', 'less', 'more', 'head', 'tail', 'grep', 'egrep
 const GIT_READ_ONLY = new Set(['diff', 'log', 'show', 'status', 'blame', 'ls-files']);
 const WRAPPERS = new Set(['sudo', 'env', 'command', 'exec', 'time', 'nohup']);
 const SHELLS = new Set(['sh', 'bash', 'zsh']);
+// git global options that take the next word as their value.
+const GIT_VALUE_OPTS = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--config-env', '--super-prefix']);
 // git commit short options whose value is the rest of the cluster or the next word.
 const COMMIT_VALUE_OPTS = 'mFcCt';
 
@@ -21,9 +23,10 @@ const MSG = {
 
 // Split a shell command into segments of words; operators (; | & && || newline) end a segment,
 // redirects become their own '>' / '<' words. Quotes are honoured, expansions are not.
+// A heredoc body is not tokenized; it is kept as text on its segment's `heredoc` property.
 function segments(cmd) {
   const out = [];
-  let words = [], word = '', inWord = false, quote = null;
+  let words = [], word = '', inWord = false, quote = null, heredocs = [];
   const endWord = () => { if (inWord) words.push(word); word = ''; inWord = false; };
   const endSeg = () => { endWord(); if (words.length) out.push(words); words = []; };
   for (let i = 0; i < cmd.length; i++) {
@@ -34,7 +37,26 @@ function segments(cmd) {
       else word += c;
     } else if (c === '"' || c === "'") { quote = c; inWord = true; }
     else if (c === '\\' && i + 1 < cmd.length) { word += cmd[++i]; inWord = true; }
-    else if (/\s/.test(c) && c !== '\n') endWord();
+    else if (c === '<' && cmd[i + 1] === '<' && cmd[i + 2] !== '<') {
+      endWord();
+      const m = /^<<-?[ \t]*(['"]?)([^\s'";|&<>()]+)\1/.exec(cmd.slice(i));
+      if (m) { heredocs.push({ delim: m[2], seg: words }); i += m[0].length - 1; }
+      else i++;
+    } else if (c === '\n' && heredocs.length) {
+      endSeg();
+      for (const h of heredocs) {
+        const body = [];
+        while (i + 1 < cmd.length) {
+          const end = cmd.indexOf('\n', i + 1) === -1 ? cmd.length : cmd.indexOf('\n', i + 1);
+          const line = cmd.slice(i + 1, end);
+          i = end;
+          if (line.replace(/^\t+/, '') === h.delim) break;
+          body.push(line);
+        }
+        h.seg.heredoc = body.join('\n');
+      }
+      heredocs = [];
+    } else if (/\s/.test(c) && c !== '\n') endWord();
     else if (';|&\n()`'.includes(c)) {
       if (c === '&' && cmd[i + 1] === '>') continue; // &> is a redirect, handled next char
       endSeg();
@@ -57,10 +79,10 @@ function commandStart(words) {
   return i;
 }
 
-// Index of the git subcommand after global options (-C dir, -c k=v, --git-dir=...).
+// Index of the git subcommand after global options (-C dir, -c k=v, --git-dir[=]dir, ...).
 function gitSub(words, i) {
   for (i++; i < words.length; i++) {
-    if (words[i] === '-C' || words[i] === '-c') i++;
+    if (GIT_VALUE_OPTS.has(words[i])) i++;
     else if (!words[i].startsWith('-')) return i;
   }
   return -1;
@@ -98,7 +120,7 @@ function forcePushesMain(words, cwd) {
   for (let i = sub + 1; i < words.length; i++) {
     const w = words[i];
     if (w === '>' || w === '<') { i++; continue; }
-    if (/^--force(-with-lease|-if-includes)?(=|$)/.test(w) || /^-[a-zA-Z]*f/.test(w) && !w.startsWith('--')) force = true;
+    if (/^--force(-with-lease|-if-includes)?(=|$)/.test(w) || (/^-[a-zA-Z]*f/.test(w) && !w.startsWith('--'))) force = true;
     else if (w === '--mirror') force = all = true;
     else if (w === '--all' || w === '--branches') all = true;
     else if (['--repo', '-o', '--push-option', '--receive-pack', '--exec'].includes(w)) i++;
@@ -142,8 +164,11 @@ function commitNoVerify(words) {
 function checkBash(cmd, cwd) {
   for (const words of segments(cmd)) {
     const start = commandStart(words);
-    if (SHELLS.has(words[start]) && words[start + 1] === '-c' && words[start + 2]) {
-      const nested = checkBash(words[start + 2], cwd);
+    if (SHELLS.has(words[start])) {
+      // `bash -c "..."`, `bash -lc "..."`, or a heredoc fed to the shell.
+      const flag = words.findIndex((w, k) => k > start && /^-[a-zA-Z]*c[a-zA-Z]*$/.test(w));
+      const script = flag === -1 ? words.heredoc : words[flag + 1];
+      const nested = script && checkBash(script, cwd);
       if (nested) return nested;
     }
     if (words[start] === 'eval') {

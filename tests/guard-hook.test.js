@@ -43,6 +43,21 @@ test('guard: blocks writes to data/expenses.json', () => {
   ]) blocked(bash(cmd), /data\/expenses\.json/);
   blocked(run('Write', { file_path: '/repo/data/expenses.json', content: '[]' }), /EXPENSES_FILE/);
   blocked(run('Edit', { file_path: 'data/Expenses.json', old_string: 'a', new_string: 'b' }), /EXPENSES_FILE/);
+  blocked(run('MultiEdit', { file_path: 'data/expenses.json', edits: [] }), /EXPENSES_FILE/);
+  blocked(run('NotebookEdit', { notebook_path: 'data/expenses.json', new_source: '' }), /EXPENSES_FILE/);
+  blocked(bash('cat > data/expenses.json <<EOF\n[]\nEOF'), /data\/expenses\.json/);
+  blocked(bash('bash <<\'EOF\'\necho [] > data/expenses.json\nEOF'), /data\/expenses\.json/);
+});
+
+test('guard: heredoc bodies are data unless fed to a shell', () => {
+  allowed(bash('cat > /tmp/body.md <<\'EOF\'\n- `cp x data/expenses.json` is blocked\n- git push -f origin main\nEOF'));
+  allowed(bash('gh pr create --body "$(cat <<-EOF\n\tgit commit --no-verify\n\tEOF\n)"'));
+  blocked(bash('cat > /tmp/body.md <<EOF\nnotes\nEOF\ngit push -f origin main'), /main\/master/);
+});
+
+test('guard: fails open on a malformed payload', () => {
+  const res = spawnSync('node', [HOOK], { input: 'not json', encoding: 'utf8' });
+  assert.equal(res.status, 0);
 });
 
 test('guard: allows reads and other files', () => {
@@ -67,6 +82,10 @@ test('guard: blocks force-push to main/master', () => {
     'git -C . push -uf origin main',
     'git push --mirror origin',
     'git checkout main && git push origin HEAD:main --force',
+    'bash -lc "git push -f origin main"',
+    'sh -e -c "git push -f origin main"',
+    'git --git-dir .git push -f origin main',
+    'git --work-tree . --namespace x push --force origin master',
   ]) blocked(bash(cmd), /main\/master/);
   blocked(bash('git push --force', mainRepo), /main\/master/);
   blocked(bash('git push -f origin HEAD', mainRepo), /main\/master/);
@@ -85,6 +104,8 @@ test('guard: blocks git commit --no-verify', () => {
     'git commit -n -m "fix: x"',
     'git commit -anm "fix: x"',
     'git add . && git commit --no-veri -m x',
+    'git --work-tree . commit -n -m x',
+    'zsh -lc "git commit --no-verify -m x"',
   ]) blocked(bash(cmd), /--no-verify/);
 });
 
