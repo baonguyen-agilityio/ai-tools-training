@@ -24,6 +24,7 @@ Request flow: `public/app.js` (fetch) → `src/server.js` (routing, query/body v
 - `.claude/skills/review-checklist` is the team review skill; use it on PRs.
 - `.claude/skills/fix-ticket` fixes a `docs/backlog/` ticket end to end, red test to squash-merge.
 - `/day-notes <N>` (`.claude/commands/day-notes.md`) drafts that day's note from merged PRs and commits.
+- `.mcp.json` declares the `playwright` and `github` MCP servers; `github` needs `GITHUB_PAT` in the environment (`export GITHUB_PAT=$(gh auth token)` in your shell profile). Never commit a token value.
 
 ## Never
 - Never read or write `data/expenses.json` from tests or scripts; always point `EXPENSES_FILE` at a temp file.
