@@ -41,4 +41,4 @@ Title = the fix commit subject. Body sections:
 ## 7. Merge
 - All threads resolved, CI green.
 - Strip `Claude-Session:` trailers and session links from commits and the PR body (`--force-with-lease` on the PR branch only).
-- Squash-merge by hand on GitHub, or via `gh pr merge <n> --squash --delete-branch` if `.claude/settings.json` allows it (auto mode blocks it otherwise). Either way, check the squash message has no trailers or AI attribution.
+- Squash-merge with an explicit message: `gh pr merge <n> --squash --delete-branch --subject "<PR title> (#<n>)" --body "<one-paragraph summary>"` (allowed by `.claude/settings.json`), or by hand on GitHub after editing the message. Never accept the default squash body: it concatenates every commit message, trailers included, and `main` cannot be rewritten afterwards.
