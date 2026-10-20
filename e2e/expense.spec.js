@@ -65,6 +65,52 @@ test('a failed refresh after a saved expense is not reported as an add error', a
   await expect(page.getByTestId('page-info')).toContainText('(13 total)');
 });
 
+test('renders category text literally, never as HTML', async ({ page }) => {
+  const dialogs = [];
+  page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });
+  const categories = ['<b>food</b>', `<img src=x onerror="alert('xss')">`];
+  await page.getByTestId('summary-month').fill('2026-03');
+
+  try {
+    for (const category of categories) {
+      await page.getByTestId('input-date').fill('2026-03-21');
+      await page.getByTestId('input-amount').fill('1');
+      await page.getByTestId('input-category').fill(category);
+      await page.getByTestId('input-note').fill('E2E probe');
+      await page.getByTestId('submit').click();
+      await expect(page.getByTestId('input-note')).toHaveValue('');
+    }
+
+    const probes = page.getByTestId('expense-row').filter({ hasText: 'E2E probe' });
+    await expect(probes).toHaveCount(2);
+    await expect(probes.locator('td:nth-child(3)')).toHaveText(categories);
+    await expect(probes.locator('b, img')).toHaveCount(0);
+    for (const category of categories) {
+      await expect(page.getByTestId('summary-category').filter({ hasText: `${category}: 1` })).toHaveCount(1);
+    }
+    expect(dialogs).toEqual([]);
+  } finally {
+    const { items } = await (await page.request.get('/api/expenses?limit=100')).json();
+    for (const e of items.filter((e) => e.note === 'E2E probe')) {
+      await page.request.delete(`/api/expenses/${e.id}`);
+    }
+  }
+});
+
+test('renders every list field literally, even values the server would reject', async ({ page }) => {
+  const forged = { id: '"><b>id</b>', date: '<b>2026-03-21</b>', amount: '<b>1</b>', category: 'food', note: 'E2E forged' };
+  await page.route(/\/api\/expenses\?/, (route) =>
+    route.fulfill({ json: { items: [forged], total: 1, page: 1, limit: 10 } }));
+  await page.reload();
+
+  const row = page.getByTestId('expense-row');
+  await expect(row).toHaveCount(1);
+  await expect(row.locator('td:nth-child(1)')).toHaveText(forged.date);
+  await expect(row.locator('td:nth-child(2)')).toHaveText(forged.amount);
+  await expect(row.getByTestId('delete-btn')).toHaveAttribute('data-id', forged.id);
+  await expect(row.locator('b')).toHaveCount(0);
+});
+
 test('deletes an expense', async ({ page }) => {
   const first = page.getByTestId('expense-row').first();
   const note = await first.locator('td:nth-child(4)').textContent();

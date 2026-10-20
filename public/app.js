@@ -27,11 +27,11 @@ async function loadList() {
       tr.dataset.testid = 'expense-row';
       tr.dataset.id = e.id;
       tr.innerHTML = `
-        <td>${e.date}</td>
-        <td class="amount">${e.amount}</td>
-        <td>${e.category}</td>
+        <td>${escapeHtml(e.date)}</td>
+        <td class="amount">${escapeHtml(e.amount)}</td>
+        <td>${escapeHtml(e.category)}</td>
         <td>${escapeHtml(e.note)}</td>
-        <td><button type="button" data-testid="delete-btn" data-id="${e.id}">Delete</button></td>`;
+        <td><button type="button" data-testid="delete-btn" data-id="${escapeHtml(e.id)}">Delete</button></td>`;
       return tr;
     }),
   );
