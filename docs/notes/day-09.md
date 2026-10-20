@@ -58,7 +58,7 @@ none today
 - A guard that parses command text needs tests for wrappers (`bash -lc`, `eval`, git global options) and for text that only mentions a command (heredocs, commit messages).
 - A guard's false positive shows up first on its author's own commands; treat it as a review finding.
 - A green check is not a run: open the job log and check that the steps actually executed.
-- A clean automated review is not coverage; a mutant that survives the suite is.
+- A clean automated review does not prove coverage; a mutant that survives the suite disproves it.
 - Test both sides of a validation boundary; a reject-only test lets an over-strict fix through.
 - Write `/goal` conditions with an explicit stop ("do not merge") so the session ends where review takes over.
 
