@@ -22,6 +22,8 @@ Request flow: `public/app.js` (fetch) → `src/server.js` (routing, query/body v
 - `docs/backlog/` holds bug/feature tickets. Treat them as user reports, not hints; reproduce as a failing test before fixing.
 - `docs/notes/day-NN.md` are training notes: one PR per day that touches only that day's note (`docs: day NN ...`).
 - `.claude/skills/review-checklist` is the team review skill; use it on PRs.
+- `.claude/skills/fix-ticket` fixes a `docs/backlog/` ticket end to end, red test to squash-merge.
+- `/day-notes <N>` (`.claude/commands/day-notes.md`) drafts that day's note from merged PRs and commits.
 
 ## Never
 - Never read or write `data/expenses.json` from tests or scripts; always point `EXPENSES_FILE` at a temp file.
