@@ -1,14 +1,14 @@
 # Day 08 — MCP servers: GitHub and Playwright
 
 ## Checkpoint
-TODO
+none today
 
 ## Project MCP config
-- `.mcp.json` declares two servers: `playwright` (stdio, `npx -y @playwright/mcp@latest`) and `github` (http, `https://api.githubcopilot.com/mcp/`).
+- `.mcp.json` declares two servers: `playwright` (stdio, `npx -y @playwright/mcp@0.0.83`) and `github` (http, `https://api.githubcopilot.com/mcp/`).
 - GitHub OAuth failed with "does not support dynamic client registration". The server instead sends `Authorization: Bearer ${GITHUB_PAT}`; `GITHUB_PAT` is exported in `~/.zshrc` from `gh auth token`. No token is stored in the repo.
 - Before committing, `.mcp.json` was scanned for token-like strings (`ghp_…`, `github_pat_…`, literal `Bearer …`): 0 matches, one `${GITHUB_PAT}` reference.
 - MCP tools are deferred: each tool's schema was loaded through ToolSearch just before its first call.
-- Committed as `3368bc8` on `feat/day-08-mcp`, with `.playwright-mcp/` added to `.gitignore`.
+- Shipped in #20, with `.playwright-mcp/` added to `.gitignore`.
 
 ## GitHub MCP — review thread on #19
 - `pull_request_read` (`get_review_comments`) listed 5 review threads on #19: 4 resolved, 1 open. The open one was the `[should] Tests` thread on `.claude/skills/fix-ticket/SKILL.md:6`: steps 2–7 of `fix-ticket` have never run end to end.
@@ -24,7 +24,14 @@ TODO
 - Saving the screenshot to a directory outside the repo was denied, because the Playwright MCP may only write inside the repo and `.playwright-mcp/`. The screenshot went to `.playwright-mcp/bug-006-probe.png`.
 - The only console error was a `favicon.ico` 404. The browser was closed, the server stopped and port 3200 freed.
 
+## Review (#20)
+- `/review-checklist` raised three `[should]` items, all fixed:
+  - `npx -y @playwright/mcp@latest` in a team-shared config: pinned to `0.0.83`.
+  - The `GITHUB_PAT` setup was documented only in this note: added a line to CLAUDE.md.
+  - This note had `TODO`s and a branch sha that does not survive the squash: now cites #20.
+
 ## Lessons
+- Pin `npx -y` packages in shared config; `@latest` runs new code in every teammate's session.
 - When a remote MCP server does not support OAuth dynamic client registration, use a header token read from an env var.
 - Commit `${VAR}` references, never values, and scan the config for token patterns before committing.
 - MCP tools write output into the repo; gitignore their output directory.
@@ -33,6 +40,6 @@ TODO
 
 ## Evidence
 - Drive day-08: https://drive.google.com/drive/folders/1BayYHoA3bB7vo8x03sy35oGi7sPNbChl
-- Commit: `3368bc8` (`feat/day-08-mcp`). PR: TODO
+- PRs: #20
 - #19 thread reply: https://github.com/baonguyen-agilityio/ai-tools-training/pull/19#discussion_r4322854270
 - Screenshot: TODO (local `.playwright-mcp/bug-006-probe.png`, gitignored; upload to Drive)
