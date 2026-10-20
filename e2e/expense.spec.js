@@ -118,3 +118,44 @@ test('deletes an expense', async ({ page }) => {
   await expect(page.getByTestId('expense-row').filter({ hasText: note })).toHaveCount(0);
   await expect(page.getByTestId('page-info')).toContainText('(12 total)');
 });
+
+test('deleting an already-deleted expense still refreshes list and summary', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const res = await page.request.post('/api/expenses', {
+    data: { date: '2026-04-01', amount: 7, category: 'food', note: 'E2E stale' },
+  });
+  const { id } = await res.json();
+  await page.reload();
+  await page.getByTestId('summary-month').fill('2026-04');
+  await expect(page.getByTestId('summary-total')).toHaveText('7');
+
+  // Removed elsewhere (another tab, double-click) while this page still shows it.
+  await page.request.delete(`/api/expenses/${id}`);
+  await page.getByTestId('expense-row').filter({ hasText: 'E2E stale' }).getByTestId('delete-btn').click();
+
+  await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E stale' })).toHaveCount(0);
+  await expect(page.getByTestId('summary-total')).toHaveText('0');
+  expect(errors).toEqual([]);
+});
+
+test('a failed delete keeps the row and does not swallow the error', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.route(/\/api\/expenses\/[^/?]+$/, (route) =>
+    route.request().method() === 'DELETE'
+      ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"internal error"}' })
+      : route.fallback(),
+  );
+  const row = page.getByTestId('expense-row').first();
+  const id = await row.getAttribute('data-id');
+  // Added behind the page's back: it can only show up if the failed delete still refreshes.
+  await page.request.post('/api/expenses', {
+    data: { date: '2026-04-02', amount: 1, category: 'food', note: 'E2E added elsewhere' },
+  });
+  await row.getByTestId('delete-btn').click();
+
+  await expect.poll(() => errors).toEqual(['internal error']);
+  await expect(page.locator(`[data-testid="expense-row"][data-id="${id}"]`)).toHaveCount(1);
+  await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E added elsewhere' })).toHaveCount(1);
+});

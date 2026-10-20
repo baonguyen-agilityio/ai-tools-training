@@ -11,7 +11,7 @@ const summaryMonth = $('#summary-month');
 async function api(path, init) {
   const res = await fetch(path, init);
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error ?? res.statusText);
+  if (!res.ok) throw Object.assign(new Error(body.error ?? res.statusText), { status: res.status });
   return body;
 }
 
@@ -88,8 +88,14 @@ form.addEventListener('submit', async (ev) => {
 rows.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('[data-testid="delete-btn"]');
   if (!btn) return;
-  await api(`/api/expenses/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
-  await Promise.all([loadList(), loadSummary()]);
+  try {
+    await api(`/api/expenses/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
+  } catch (err) {
+    // 404: already gone (stale page, double-click), nothing to report. Anything else is a real failure.
+    if (err.status !== 404) throw err;
+  } finally {
+    await Promise.all([loadList(), loadSummary()]);
+  }
 });
 
 $('#filter-category').addEventListener('change', (ev) => {

@@ -81,6 +81,7 @@ async function handleApi(req, res, url) {
     if (method !== 'DELETE') throw Object.assign(new Error('method not allowed'), { status: 405 });
     const id = decodeURIComponent(idMatch[1]);
     const result = remove(store.load(), id);
+    if (!result.removed) throw Object.assign(new Error('expense not found'), { status: 404 });
     store.save(result.expenses);
     return sendJson(res, 200, { id });
   }
