@@ -149,8 +149,13 @@ test('a failed delete keeps the row and does not swallow the error', async ({ pa
   );
   const row = page.getByTestId('expense-row').first();
   const id = await row.getAttribute('data-id');
+  // Added behind the page's back: it can only show up if the failed delete still refreshes.
+  await page.request.post('/api/expenses', {
+    data: { date: '2026-04-02', amount: 1, category: 'food', note: 'E2E added elsewhere' },
+  });
   await row.getByTestId('delete-btn').click();
 
   await expect.poll(() => errors).toEqual(['internal error']);
   await expect(page.locator(`[data-testid="expense-row"][data-id="${id}"]`)).toHaveCount(1);
+  await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E added elsewhere' })).toHaveCount(1);
 });
