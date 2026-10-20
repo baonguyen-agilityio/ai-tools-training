@@ -18,6 +18,15 @@ test('validate: rejects bad date, amount, category', () => {
   assert.throws(() => validate({ date: '2026-03-01', amount: 1, category: '' }), /category/);
 });
 
+test('validate: accepts the last real day of a month and rejects the day after', () => {
+  for (const date of ['2026-01-31', '2026-04-30', '2026-12-31', '2028-02-29']) {
+    assert.equal(validate({ date, amount: 1, category: 'a' }).date, date);
+  }
+  for (const date of ['2026-02-29', '2026-04-31', '2026-02-31']) {
+    assert.throws(() => validate({ date, amount: 1, category: 'a' }), /date/, date);
+  }
+});
+
 test('create: appends with a fresh id and does not mutate input list', () => {
   const { expenses, created } = create(seed, { date: '2026-03-20', amount: 5, category: 'food' });
   assert.equal(expenses.length, seed.length + 1);

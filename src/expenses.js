@@ -14,6 +14,11 @@ import { randomUUID } from 'node:crypto';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /** Round a user-supplied amount to cents. */
 const round2 = (n) => Math.round(n * 100) / 100;
+/** True only for real calendar days: Date.parse rolls 2026-02-31 over to March 3, so round-trip it. */
+const isRealDate = (s) => {
+  const t = Date.parse(s);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
+};
 
 /**
  * Validate and normalize user input into an Expense (without id).
@@ -23,7 +28,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
  */
 export function validate(input) {
   const date = String(input.date ?? '');
-  if (!DATE_RE.test(date) || Number.isNaN(Date.parse(date))) {
+  if (!DATE_RE.test(date) || !isRealDate(date)) {
     throw new Error('date must be YYYY-MM-DD');
   }
   const amount = Number(input.amount);

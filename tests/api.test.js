@@ -72,6 +72,17 @@ test('POST /api/expenses validates input', async () => {
   assert.equal(store.load().length, 12);
 });
 
+test('POST /api/expenses rejects dates that do not exist', async () => {
+  for (const date of ['2026-02-31', '2026-04-31', '2026-02-30', '2026-02-29', '2026-13-01']) {
+    const res = await post({ date, amount: 5, category: 'food', note: 'probe' });
+    assert.equal(res.status, 400, date);
+    assert.deepEqual(await res.json(), { error: 'date must be YYYY-MM-DD' });
+  }
+  assert.equal(store.load().length, 12);
+  assert.equal((await (await api('/api/summary?month=2026-02')).json()).total, 315.29);
+  assert.equal((await post({ date: '2028-02-29', amount: 5, category: 'food' })).status, 201);
+});
+
 test('POST /api/expenses rejects malformed JSON', async () => {
   const res = await api('/api/expenses', {
     method: 'POST',
