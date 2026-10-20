@@ -7,7 +7,7 @@ Draft the training note for day $1 at `docs/notes/day-NN.md` (`NN` = $1 zero-pad
 
 ## Gather
 1. Read the two most recent `docs/notes/day-*.md` to match their style.
-2. `gh pr list --state merged --search "merged:$(date +%F)" --json number,title,body,url` — today's merged PRs; for each, `gh pr view <n> --comments` and its review threads for what review found and how it was fixed. Skip PRs already cited in an earlier day's note (two training days can share a date).
+2. `gh pr list --state merged --search "merged:>=$(date +%FT00:00:00%z)" --json number,title,body,url` — PRs merged since local midnight (a date-only `merged:` is UTC); for each, `gh pr view <n> --comments` and its review threads for what review found and how it was fixed. Skip PRs already cited in an earlier day's note (two training days can share a date).
 3. `git fetch origin` then `git log origin/main --since=midnight --format='%h %s%n%b'` — today's commits on `main`.
 4. If the file already exists, read it and extend it instead of overwriting.
 
