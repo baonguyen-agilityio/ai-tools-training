@@ -89,7 +89,7 @@ async function handleApi(req, res, url) {
   if (pathname === '/api/summary') {
     if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
     const month = searchParams.get('month') ?? '';
-    if (!/^\d{4}-\d{2}$/.test(month)) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
       throw Object.assign(new Error('month must be YYYY-MM'), { status: 400 });
     }
     return sendJson(res, 200, summary(store.load(), month));
