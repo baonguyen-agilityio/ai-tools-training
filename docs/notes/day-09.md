@@ -42,7 +42,7 @@ none today
 - `/review-checklist` raised one `[should]`: expense dates had the same shape-only validation. It was deferred and filed as BUG-008 (d0cafed). Two nits were answered "won't fix", one of them backed by a mutant check.
 
 ## /goal — BUG-008 (#24)
-- `/goal` set a session Stop hook with the condition "fixed via /fix-ticket, red test first, PR open and green, review threads verified and resolved; do not merge". The session ran `fix-ticket` to an open green PR and stopped there.
+- `/goal` set a session Stop hook with the condition "BUG-008 is fixed via /fix-ticket: red test committed first, fix merged-ready in a PR, CI green, /review-checklist threads verified and resolved. Stop when the PR is open and green; do not merge." The session ran `fix-ticket` to an open green PR and stopped there.
 - Ticket: all claims held, including the reporter's guess that `Date.parse` rolls `2026-02-31` over to March 3. An unreported sibling, `2026-02-29` in a non-leap year, was accepted the same way.
 - Red test 8b496da (`2026-02-31`: 201 ≠ 400). Fix b664f0b: `validate()` in `src/expenses.js` now checks that the parsed date formats back to the same `YYYY-MM-DD`.
 - `/review-checklist` on b664f0b raised one `[should]`: no test accepted a real month-end day. A mutant that rejects every 31st passed all 36 tests.
