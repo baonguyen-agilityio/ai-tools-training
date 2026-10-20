@@ -35,7 +35,8 @@ none today
   - `claude-code-review.yml` runs on every `pull_request` (opened, synchronize, ready_for_review, reopened).
 - The repo is private, so only collaborators can trigger `@claude`.
 - On its own PR, the `claude-review` job showed green (12s) but its action steps were `skipped` and it posted nothing; the log does not say why.
-- Once the workflow was on `main`, `claude-review` ran on #24 and posted a comment. `claude.yml` (`@claude` mentions) has not been triggered yet.
+- Once the workflow was on `main`, `claude-review` ran on #24 and posted a comment. On the Day 09 notes PR it again posted "No issues found" on the first commit, 9 seconds before the local `/review-checklist` posted three `[should]` items.
+- `claude.yml` has not handled a real mention yet. Its only non-skipped run (39408606745) came from a review comment that quoted `@claude` in backticks: the workflow's `contains` filter passed, the action logged "Trigger result: false … No trigger found, skipping remaining steps", and the job still finished green.
 - `/review-checklist`: no blockers. Two `[should]` follow-ups were neither fixed nor filed: each push to any PR triggers a full review, including docs-only notes (`paths-ignore: ['docs/**']` would stop that), and the first live run of each workflow still needed checking.
 
 ## fix-ticket end to end — BUG-007 (#21)
