@@ -114,6 +114,15 @@ test('GET /api/summary requires month', async () => {
   assert.equal((await api('/api/summary?month=2026-1')).status, 400);
 });
 
+test('GET /api/summary rejects months that do not exist', async () => {
+  for (const month of ['2026-13', '2026-00']) {
+    const res = await api(`/api/summary?month=${month}`);
+    assert.equal(res.status, 400, month);
+    assert.deepEqual(await res.json(), { error: 'month must be YYYY-MM' });
+  }
+  assert.equal((await api('/api/summary?month=2026-12')).status, 200);
+});
+
 test('unknown routes and methods', async () => {
   assert.equal((await api('/api/nope')).status, 404);
   assert.equal((await api('/api/summary', { method: 'POST' })).status, 405);
