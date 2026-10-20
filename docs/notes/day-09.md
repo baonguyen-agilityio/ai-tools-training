@@ -34,8 +34,9 @@ none today
   - `claude.yml` runs on `issue_comment`, `pull_request_review_comment`, `pull_request_review` and `issues` (opened, assigned), only when the text contains `@claude`.
   - `claude-code-review.yml` runs on every `pull_request` (opened, synchronize, ready_for_review, reopened).
 - The repo is private, so only collaborators can trigger `@claude`.
-- On its own PR, the `claude-review` job showed green (12s) but its action steps were `skipped` and it posted nothing. The action only runs once the workflow file is on the default branch.
-- `/review-checklist`: no blockers. Two `[should]` follow-ups were left open: each push to any PR triggers a full review, including docs-only notes (`paths-ignore: ['docs/**']` would stop that), and neither workflow had yet run end to end.
+- On its own PR, the `claude-review` job showed green (12s) but its action steps were `skipped` and it posted nothing; the log does not say why.
+- Once the workflow was on `main`, `claude-review` ran on #24 and posted a comment. `claude.yml` (`@claude` mentions) has not been triggered yet.
+- `/review-checklist`: no blockers. Two `[should]` follow-ups were neither fixed nor filed: each push to any PR triggers a full review, including docs-only notes (`paths-ignore: ['docs/**']` would stop that), and the first live run of each workflow still needed checking.
 
 ## fix-ticket end to end — BUG-007 (#21)
 - Red test e15543e, fix fe15066: the `month` regex in `src/server.js` became `/^\d{4}-(0[1-9]|1[0-2])$/`, so `2026-13` and `2026-00` return 400.
