@@ -56,15 +56,15 @@ none today
 ## Lessons
 - Prove a hook live with harmless probes (`touch`, `--dry-run`, nothing staged), so a hook that never loaded cannot do damage.
 - A guard that parses command text needs tests for wrappers (`bash -lc`, `eval`, git global options) and for text that only mentions a command (heredocs, commit messages).
-- A guard's false positive shows up first on its author's own commands; treat it as a review finding.
+- A guard's false positive can show up first on its author's own commands; treat it as a review finding.
 - A green check is not a run: open the job log and check that the steps actually executed.
 - A clean automated review does not prove coverage; a mutant that survives the suite disproves it.
 - Test both sides of a validation boundary; a reject-only test lets an over-strict fix through.
 - Write `/goal` conditions with an explicit stop ("do not merge") so the session ends where review takes over.
 
 ## Evidence
+- Drive day-09: https://drive.google.com/drive/folders/13xIrP4OilxL5TpbjPwCqh-KIwBYHe6TN (screenshot of #24: bot "No issues found" next to the local `/review-checklist`)
 - PRs: #21, #22, #23, #24
-- Commits: 43bc6ea (#22), 47a498e (#23), d0cafed (BUG-008 ticket), a38f603 (#24)
+- Commits: a48c36a (BUG-007 ticket), e075901 (#21), 43bc6ea (#22), 47a498e (#23), d0cafed (BUG-008 ticket), a38f603 (#24)
 - #22 review: https://github.com/baonguyen-agilityio/ai-tools-training/pull/22#pullrequestreview-5582988286
 - #24 review: https://github.com/baonguyen-agilityio/ai-tools-training/pull/24#pullrequestreview-5583665960
-- Drive day-09: https://drive.google.com/drive/folders/13xIrP4OilxL5TpbjPwCqh-KIwBYHe6TN (screenshot of #24: bot "No issues found" next to the local `/review-checklist`)
