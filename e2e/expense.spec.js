@@ -159,3 +159,30 @@ test('a failed delete keeps the row and does not swallow the error', async ({ pa
   await expect(page.locator(`[data-testid="expense-row"][data-id="${id}"]`)).toHaveCount(1);
   await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E added elsewhere' })).toHaveCount(1);
 });
+
+test('search highlights matches and renders the note literally, never as HTML', async ({ page }) => {
+  const dialogs = [];
+  page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const note = `<img src=x onerror="alert('xss')"> (team)`;
+  const { id } = await (await page.request.post('/api/expenses', {
+    data: { date: '2026-03-21', amount: 1, category: 'food', note },
+  })).json();
+
+  try {
+    await page.reload();
+    const row = page.getByTestId('expense-row').filter({ hasText: '(team)' });
+    await expect(row.locator('td:nth-child(4)')).toHaveText(note);
+    await expect(row.locator('img')).toHaveCount(0);
+
+    await page.getByTestId('search-note').fill('(team');
+    await expect(row.locator('mark')).toHaveText('(team');
+    await expect(row.locator('td:nth-child(4)')).toHaveText(note);
+    await expect(row.locator('img')).toHaveCount(0);
+    expect(dialogs).toEqual([]);
+    expect(errors).toEqual([]);
+  } finally {
+    await page.request.delete(`/api/expenses/${id}`);
+  }
+});

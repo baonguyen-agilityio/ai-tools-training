@@ -58,11 +58,13 @@ async function loadSummary() {
   );
 }
 
-/** Wrap every match of the search term in <mark>. */
+/** Escaped text with every literal match of the search term wrapped in <mark>. */
 function highlight(text, q) {
-  const s = String(text);
+  const s = escapeHtml(text);
   if (!q) return s;
-  return s.replace(new RegExp(q, 'ig'), (m) => `<mark>${m}</mark>`);
+  // Escape q the same way, then neutralise regex metacharacters so '(' or '.' match literally.
+  const needle = escapeHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return s.replace(new RegExp(needle, 'ig'), (m) => `<mark>${m}</mark>`);
 }
 
 function escapeHtml(s) {
