@@ -68,15 +68,15 @@ export function remove(expenses, id) {
  * @returns {{ items: Expense[], page: number, limit: number, total: number }}
  */
 export function list(expenses, { page = 1, limit = 10, category, q } = {}) {
-  const filtered = category
-    ? expenses.filter((e) => e.category === category.toLowerCase())
-    : expenses;
-  const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+  const cat = category?.toLowerCase();
   const needle = q?.trim().toLowerCase();
-  const matches = needle ? sorted.filter((e) => e.note.toLowerCase().includes(needle)) : sorted;
+  // Filter first so items, total and hasMore all describe the same set.
+  const matches = expenses
+    .filter((e) => (!cat || e.category === cat) && (!needle || e.note.toLowerCase().includes(needle)))
+    .sort((a, b) => b.date.localeCompare(a.date));
   const offset = (page - 1) * limit;
-  const hasMore = offset + limit < sorted.length;
-  return { items: matches.slice(offset, offset + limit), page, limit, total: sorted.length, hasMore };
+  const hasMore = offset + limit < matches.length;
+  return { items: matches.slice(offset, offset + limit), page, limit, total: matches.length, hasMore };
 }
 
 /**

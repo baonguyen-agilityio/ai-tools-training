@@ -54,6 +54,7 @@ test('GET /api/expenses returns the remaining items on page 2', async () => {
 test('GET /api/expenses searches notes with q', async () => {
   const body = await (await api('/api/expenses?q=grab')).json();
   assert.deepEqual(body.items.map((e) => e.id), ['a2']);
+  assert.equal(body.total, 1);
 });
 
 test('GET /api/export returns CSV for the month', async () => {

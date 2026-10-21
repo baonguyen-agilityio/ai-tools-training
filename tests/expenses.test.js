@@ -112,9 +112,11 @@ test('summary: an expense dated the 1st stays in its month regardless of process
   }
 });
 
-test('list: q matches notes case-insensitively', () => {
-  const { items } = list(seed, { q: 'COFFEE' });
+test('list: q matches notes case-insensitively and paging counts only the matches', () => {
+  const { items, total, hasMore } = list(seed, { q: 'COFFEE' });
   assert.deepEqual(items.map((e) => e.id), ['a3']);
+  assert.equal(total, 1);
+  assert.equal(hasMore, false);
 });
 
 test('toCsv: header plus one row per expense in the month, oldest first', () => {
