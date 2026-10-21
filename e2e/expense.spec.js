@@ -34,7 +34,7 @@ test('shows monthly summary for a chosen month', async ({ page }) => {
 
 test('adds an expense and shows it without a reload', async ({ page }) => {
   await page.getByTestId('summary-month').fill('2026-03');
-  await expect(page.getByTestId('summary-total')).toHaveText('115.3');
+  await expect(page.getByTestId('summary-total')).toHaveText('115.30');
 
   await page.getByTestId('input-date').fill('2026-03-20');
   await page.getByTestId('input-amount').fill('5.5');
@@ -45,8 +45,8 @@ test('adds an expense and shows it without a reload', async ({ page }) => {
 
   await expect(page.getByTestId('expense-row').first()).toContainText('E2E tea');
   await expect(page.getByTestId('page-info')).toContainText('(13 total)');
-  await expect(page.getByTestId('summary-total')).toHaveText('120.8');
-  await expect(page.locator('[data-testid="summary-category"][data-category="food"]')).toHaveText('food: 27.8');
+  await expect(page.getByTestId('summary-total')).toHaveText('120.80');
+  await expect(page.locator('[data-testid="summary-category"][data-category="food"]')).toHaveText('food: 27.80');
 });
 
 test('a failed refresh after a saved expense is not reported as an add error', async ({ page }) => {
@@ -86,7 +86,7 @@ test('renders category text literally, never as HTML', async ({ page }) => {
     await expect(probes.locator('td:nth-child(3)')).toHaveText(categories);
     await expect(probes.locator('b, img')).toHaveCount(0);
     for (const category of categories) {
-      await expect(page.getByTestId('summary-category').filter({ hasText: `${category}: 1` })).toHaveCount(1);
+      await expect(page.getByTestId('summary-category').filter({ hasText: `${category}: 1.00` })).toHaveCount(1);
     }
     expect(dialogs).toEqual([]);
   } finally {
@@ -128,14 +128,14 @@ test('deleting an already-deleted expense still refreshes list and summary', asy
   const { id } = await res.json();
   await page.reload();
   await page.getByTestId('summary-month').fill('2026-04');
-  await expect(page.getByTestId('summary-total')).toHaveText('7');
+  await expect(page.getByTestId('summary-total')).toHaveText('7.00');
 
   // Removed elsewhere (another tab, double-click) while this page still shows it.
   await page.request.delete(`/api/expenses/${id}`);
   await page.getByTestId('expense-row').filter({ hasText: 'E2E stale' }).getByTestId('delete-btn').click();
 
   await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E stale' })).toHaveCount(0);
-  await expect(page.getByTestId('summary-total')).toHaveText('0');
+  await expect(page.getByTestId('summary-total')).toHaveText('0.00');
   expect(errors).toEqual([]);
 });
 
@@ -218,5 +218,22 @@ test('highlight never matches inside an escaped character', async ({ page }) => 
     await expect(cell).toHaveText(note);
   } finally {
     await page.request.delete(`/api/expenses/${id}`);
+  }
+});
+
+test('shows every amount with exactly two decimals, like the CSV export', async ({ page }) => {
+  const amountOf = (note) => page.getByTestId('expense-row').filter({ hasText: note }).locator('td:nth-child(2)');
+  await expect(amountOf('Dinner')).toHaveText('22.30');
+  await expect(amountOf('Taxi')).toHaveText('18.00');
+  for (const cell of await page.getByTestId('expense-row').locator('td:nth-child(2)').all()) {
+    await expect(cell).toHaveText(/^\d+\.\d{2}$/);
+  }
+
+  await page.getByTestId('summary-month').fill('2026-01');
+  await expect(page.getByTestId('summary-total')).toHaveText('186.25');
+  await expect(page.locator('[data-testid="summary-category"][data-category="transport"]')).toHaveText('transport: 45.00');
+  await expect(page.locator('[data-testid="summary-category"][data-category="bills"]')).toHaveText('bills: 120.00');
+  for (const li of await page.getByTestId('summary-category').all()) {
+    await expect(li).toHaveText(/: \d+\.\d{2}$/);
   }
 });
