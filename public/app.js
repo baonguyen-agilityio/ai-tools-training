@@ -1,5 +1,5 @@
 // Minimal client: fetch from the API, render, re-fetch after every mutation.
-const state = { page: 1, limit: 10, category: '' };
+const state = { page: 1, limit: 10, category: '', q: '' };
 
 const $ = (sel) => document.querySelector(sel);
 const rows = $('#expense-rows');
@@ -18,6 +18,7 @@ async function api(path, init) {
 async function loadList() {
   const params = new URLSearchParams({ page: state.page, limit: state.limit });
   if (state.category) params.set('category', state.category);
+  if (state.q) params.set('q', state.q);
   const { items, total, page, limit } = await api(`/api/expenses?${params}`);
   const pages = Math.max(1, Math.ceil(total / limit));
 
@@ -30,7 +31,7 @@ async function loadList() {
         <td>${escapeHtml(e.date)}</td>
         <td class="amount">${escapeHtml(e.amount)}</td>
         <td>${escapeHtml(e.category)}</td>
-        <td>${escapeHtml(e.note)}</td>
+        <td>${highlight(e.note, state.q)}</td>
         <td><button type="button" data-testid="delete-btn" data-id="${escapeHtml(e.id)}">Delete</button></td>`;
       return tr;
     }),
@@ -43,6 +44,7 @@ async function loadList() {
 async function loadSummary() {
   const month = summaryMonth.value;
   if (!month) return;
+  $('#export-link').href = `/api/export?month=${month}`;
   const { total, byCategory } = await api(`/api/summary?month=${month}`);
   $('#summary-total').textContent = total;
   $('#summary-categories').replaceChildren(
@@ -54,6 +56,13 @@ async function loadSummary() {
       return li;
     }),
   );
+}
+
+/** Wrap every match of the search term in <mark>. */
+function highlight(text, q) {
+  const s = String(text);
+  if (!q) return s;
+  return s.replace(new RegExp(q, 'ig'), (m) => `<mark>${m}</mark>`);
 }
 
 function escapeHtml(s) {
@@ -100,6 +109,12 @@ rows.addEventListener('click', async (ev) => {
 
 $('#filter-category').addEventListener('change', (ev) => {
   state.category = ev.target.value.trim();
+  state.page = 1;
+  loadList();
+});
+
+$('#search-note').addEventListener('input', (ev) => {
+  state.q = ev.target.value.trim();
   state.page = 1;
   loadList();
 });

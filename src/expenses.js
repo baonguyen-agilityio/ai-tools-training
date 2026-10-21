@@ -62,19 +62,21 @@ export function remove(expenses, id) {
 }
 
 /**
- * Newest first, optional category filter, 1-based pages.
+ * Newest first, optional category filter and note search, 1-based pages.
  * @param {Expense[]} expenses
- * @param {{ page?: number, limit?: number, category?: string }} [opts]
+ * @param {{ page?: number, limit?: number, category?: string, q?: string }} [opts]
  * @returns {{ items: Expense[], page: number, limit: number, total: number }}
  */
-export function list(expenses, { page = 1, limit = 10, category } = {}) {
+export function list(expenses, { page = 1, limit = 10, category, q } = {}) {
   const filtered = category
     ? expenses.filter((e) => e.category === category.toLowerCase())
     : expenses;
   const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+  const needle = q?.trim().toLowerCase();
+  const matches = needle ? sorted.filter((e) => e.note.toLowerCase().includes(needle)) : sorted;
   const offset = (page - 1) * limit;
   const hasMore = offset + limit < sorted.length;
-  return { items: sorted.slice(offset, offset + limit), page, limit, total: sorted.length, hasMore };
+  return { items: matches.slice(offset, offset + limit), page, limit, total: sorted.length, hasMore };
 }
 
 /**
@@ -101,4 +103,20 @@ export function summary(expenses, month) {
   const byCategory = {};
   for (const k in centsByCategory) byCategory[k] = centsByCategory[k] / 100;
   return { month, total: cents / 100, byCategory };
+}
+
+const CSV_HEADER = 'date,amount,category,note';
+
+/**
+ * One month of expenses as CSV, oldest first, header row included.
+ * @param {Expense[]} expenses
+ * @param {string} month  YYYY-MM
+ * @returns {string}
+ */
+export function toCsv(expenses, month) {
+  const rows = expenses
+    .filter((e) => e.date.slice(0, 7) === month)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((e) => [e.date, e.amount.toFixed(2), e.category, e.note].join(','));
+  return [CSV_HEADER, ...rows].join('\n') + '\n';
 }

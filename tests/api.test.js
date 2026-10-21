@@ -51,6 +51,19 @@ test('GET /api/expenses returns the remaining items on page 2', async () => {
   assert.deepEqual(body.items.map((e) => e.id), ['a2', 'a1']);
 });
 
+test('GET /api/expenses searches notes with q', async () => {
+  const body = await (await api('/api/expenses?q=grab')).json();
+  assert.deepEqual(body.items.map((e) => e.id), ['a2']);
+});
+
+test('GET /api/export returns CSV for the month', async () => {
+  const res = await api('/api/export?month=2026-03');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/csv/);
+  assert.match(res.headers.get('content-disposition'), /expenses-2026-03\.csv/);
+  assert.equal((await res.text()).split('\n').length, 5);
+});
+
 test('GET /api/expenses rejects bad paging', async () => {
   assert.equal((await api('/api/expenses?page=0')).status, 400);
   assert.equal((await api('/api/expenses?limit=abc')).status, 400);

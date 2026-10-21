@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validate, create, remove, list, summary } from '../src/expenses.js';
+import { validate, create, remove, list, summary, toCsv } from '../src/expenses.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 
@@ -110,4 +110,16 @@ test('summary: an expense dated the 1st stays in its month regardless of process
   } finally {
     if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
   }
+});
+
+test('list: q matches notes case-insensitively', () => {
+  const { items } = list(seed, { q: 'COFFEE' });
+  assert.deepEqual(items.map((e) => e.id), ['a3']);
+});
+
+test('toCsv: header plus one row per expense in the month, oldest first', () => {
+  const lines = toCsv(seed, '2026-01').trimEnd().split('\n');
+  assert.equal(lines[0], 'date,amount,category,note');
+  assert.equal(lines.length, 5);
+  assert.equal(lines[1], '2026-01-03,12.50,food,Lunch');
 });
