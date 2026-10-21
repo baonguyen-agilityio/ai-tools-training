@@ -186,3 +186,21 @@ test('search highlights matches and renders the note literally, never as HTML', 
     await page.request.delete(`/api/expenses/${id}`);
   }
 });
+
+test('a slow response for an earlier search term does not overwrite the current results', async ({ page }) => {
+  let releaseStale;
+  const stale = { id: 'stale', date: '2026-01-01', amount: 1, category: 'food', note: 'STALE' };
+  await page.route(/q=c$/, async (route) => {
+    await new Promise((r) => { releaseStale = r; });
+    await route.fulfill({ json: { items: [stale], total: 1, page: 1, limit: 10 } });
+  });
+
+  await page.getByTestId('search-note').pressSequentially('co');
+  await expect(page.getByTestId('page-info')).toContainText('(2 total)');
+  releaseStale();
+  await page.waitForResponse(/q=c$/);
+  await page.waitForTimeout(300);
+
+  await expect(page.getByTestId('expense-row').filter({ hasText: 'STALE' })).toHaveCount(0);
+  await expect(page.getByTestId('page-info')).toContainText('(2 total)');
+});

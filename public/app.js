@@ -1,5 +1,6 @@
 // Minimal client: fetch from the API, render, re-fetch after every mutation.
 const state = { page: 1, limit: 10, category: '', q: '' };
+let listSeq = 0; // bumped per loadList(); a response for an older request is dropped
 
 const $ = (sel) => document.querySelector(sel);
 const rows = $('#expense-rows');
@@ -19,7 +20,9 @@ async function loadList() {
   const params = new URLSearchParams({ page: state.page, limit: state.limit });
   if (state.category) params.set('category', state.category);
   if (state.q) params.set('q', state.q);
+  const seq = ++listSeq;
   const { items, total, page, limit } = await api(`/api/expenses?${params}`);
+  if (seq !== listSeq) return;
   const pages = Math.max(1, Math.ceil(total / limit));
 
   rows.replaceChildren(
