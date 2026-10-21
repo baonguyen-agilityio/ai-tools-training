@@ -33,6 +33,9 @@
       <label>Filter category
         <input id="filter-category" list="categories" placeholder="all" data-testid="filter-category" />
       </label>
+      <label>Search note
+        <input id="search-note" type="search" placeholder="e.g. coffee" data-testid="search-note" />
+      </label>
       <table data-testid="expense-table">
         <thead>
           <tr><th>Date</th><th>Amount</th><th>Category</th><th>Note</th><th></th></tr>
@@ -50,6 +53,7 @@
       <h2>Monthly summary</h2>
       <label>Month <input id="summary-month" type="month" data-testid="summary-month" /></label>
       <p>Total: <strong id="summary-total" data-testid="summary-total"></strong></p>
+      <p><a id="export-link" href="#" download data-testid="export-link">Export CSV</a></p>
       <ul id="summary-categories"></ul>
     </section>
   </main>

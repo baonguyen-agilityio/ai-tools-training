@@ -159,3 +159,64 @@ test('a failed delete keeps the row and does not swallow the error', async ({ pa
   await expect(page.locator(`[data-testid="expense-row"][data-id="${id}"]`)).toHaveCount(1);
   await expect(page.getByTestId('expense-row').filter({ hasText: 'E2E added elsewhere' })).toHaveCount(1);
 });
+
+test('search highlights matches and renders the note literally, never as HTML', async ({ page }) => {
+  const dialogs = [];
+  page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const note = `<img src=x onerror="alert('xss')"> (team)`;
+  const { id } = await (await page.request.post('/api/expenses', {
+    data: { date: '2026-03-21', amount: 1, category: 'food', note },
+  })).json();
+
+  try {
+    await page.reload();
+    const row = page.getByTestId('expense-row').filter({ hasText: '(team)' });
+    await expect(row.locator('td:nth-child(4)')).toHaveText(note);
+    await expect(row.locator('img')).toHaveCount(0);
+
+    await page.getByTestId('search-note').fill('(team');
+    await expect(row.locator('mark')).toHaveText('(team');
+    await expect(row.locator('td:nth-child(4)')).toHaveText(note);
+    await expect(row.locator('img')).toHaveCount(0);
+    expect(dialogs).toEqual([]);
+    expect(errors).toEqual([]);
+  } finally {
+    await page.request.delete(`/api/expenses/${id}`);
+  }
+});
+
+test('a slow response for an earlier search term does not overwrite the current results', async ({ page }) => {
+  let releaseStale;
+  const stale = { id: 'stale', date: '2026-01-01', amount: 1, category: 'food', note: 'STALE' };
+  await page.route(/q=c$/, async (route) => {
+    await new Promise((r) => { releaseStale = r; });
+    await route.fulfill({ json: { items: [stale], total: 1, page: 1, limit: 10 } });
+  });
+
+  await page.getByTestId('search-note').pressSequentially('co');
+  await expect(page.getByTestId('page-info')).toContainText('(2 total)');
+  releaseStale();
+  await page.waitForResponse(/q=c$/);
+  await page.waitForTimeout(300);
+
+  await expect(page.getByTestId('expense-row').filter({ hasText: 'STALE' })).toHaveCount(0);
+  await expect(page.getByTestId('page-info')).toContainText('(2 total)');
+});
+
+test('highlight never matches inside an escaped character', async ({ page }) => {
+  const note = "Tom's 39 tea";
+  const { id } = await (await page.request.post('/api/expenses', {
+    data: { date: '2026-03-22', amount: 1, category: 'food', note },
+  })).json();
+  try {
+    await page.reload();
+    await page.getByTestId('search-note').fill('39');
+    const cell = page.getByTestId('expense-row').filter({ hasText: 'tea' }).locator('td:nth-child(4)');
+    await expect(cell.locator('mark')).toHaveText(['39']);
+    await expect(cell).toHaveText(note);
+  } finally {
+    await page.request.delete(`/api/expenses/${id}`);
+  }
+});

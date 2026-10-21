@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as store from './store.js';
-import { create, remove, list, summary } from './expenses.js';
+import { create, remove, list, summary, toCsv } from './expenses.js';
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public/', import.meta.url)));
 const MIME = {
@@ -33,6 +33,15 @@ async function readJson(req) {
   }
 }
 
+/** The validated month=YYYY-MM query param, or a 400 error. */
+function readMonth(searchParams) {
+  const month = searchParams.get('month') ?? '';
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw Object.assign(new Error('month must be YYYY-MM'), { status: 400 });
+  }
+  return month;
+}
+
 /** Serve a file under public/; "/" maps to index.html. */
 async function serveStatic(res, pathname) {
   const rel = pathname === '/' ? 'index.html' : pathname.slice(1);
@@ -57,10 +66,11 @@ async function handleApi(req, res, url) {
       const page = Number(searchParams.get('page') ?? 1);
       const limit = Number(searchParams.get('limit') ?? 10);
       const category = searchParams.get('category') ?? undefined;
+      const q = searchParams.get('q') ?? undefined;
       if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
         throw Object.assign(new Error('page and limit must be positive integers'), { status: 400 });
       }
-      return sendJson(res, 200, list(store.load(), { page, limit, category }));
+      return sendJson(res, 200, list(store.load(), { page, limit, category, q }));
     }
     if (method === 'POST') {
       const input = await readJson(req);
@@ -88,11 +98,19 @@ async function handleApi(req, res, url) {
 
   if (pathname === '/api/summary') {
     if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
-    const month = searchParams.get('month') ?? '';
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
-      throw Object.assign(new Error('month must be YYYY-MM'), { status: 400 });
-    }
-    return sendJson(res, 200, summary(store.load(), month));
+    return sendJson(res, 200, summary(store.load(), readMonth(searchParams)));
+  }
+
+  if (pathname === '/api/export') {
+    if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
+    const month = readMonth(searchParams);
+    // Build the body before writing headers: a load failure must still reach the 500 handler.
+    const csv = toCsv(store.load(), month);
+    res.writeHead(200, {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="expenses-${month}.csv"`,
+    });
+    return res.end(csv);
   }
 
   throw Object.assign(new Error('not found'), { status: 404 });

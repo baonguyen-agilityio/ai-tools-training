@@ -62,19 +62,21 @@ export function remove(expenses, id) {
 }
 
 /**
- * Newest first, optional category filter, 1-based pages.
+ * Newest first, optional category filter and note search, 1-based pages.
  * @param {Expense[]} expenses
- * @param {{ page?: number, limit?: number, category?: string }} [opts]
+ * @param {{ page?: number, limit?: number, category?: string, q?: string }} [opts]
  * @returns {{ items: Expense[], page: number, limit: number, total: number }}
  */
-export function list(expenses, { page = 1, limit = 10, category } = {}) {
-  const filtered = category
-    ? expenses.filter((e) => e.category === category.toLowerCase())
-    : expenses;
-  const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+export function list(expenses, { page = 1, limit = 10, category, q } = {}) {
+  const cat = category?.toLowerCase();
+  const needle = q?.trim().toLowerCase();
+  // Filter first so items, total and hasMore all describe the same set.
+  const matches = expenses
+    .filter((e) => (!cat || e.category === cat) && (!needle || e.note.toLowerCase().includes(needle)))
+    .sort((a, b) => b.date.localeCompare(a.date));
   const offset = (page - 1) * limit;
-  const hasMore = offset + limit < sorted.length;
-  return { items: sorted.slice(offset, offset + limit), page, limit, total: sorted.length, hasMore };
+  const hasMore = offset + limit < matches.length;
+  return { items: matches.slice(offset, offset + limit), page, limit, total: matches.length, hasMore };
 }
 
 /**
@@ -101,4 +103,32 @@ export function summary(expenses, month) {
   const byCategory = {};
   for (const k in centsByCategory) byCategory[k] = centsByCategory[k] / 100;
   return { month, total: cents / 100, byCategory };
+}
+
+const CSV_HEADER = 'date,amount,category,note';
+// Byte-order mark: without it Excel reads a double-clicked .csv as the legacy ANSI codepage.
+const CSV_BOM = '\ufeff';
+
+/**
+ * RFC 4180 field: always quoted, inner quotes doubled. A leading = + - @ is
+ * prefixed with an apostrophe so spreadsheets show it as text, not a formula.
+ * @param {unknown} value
+ */
+function csvField(value) {
+  const s = String(value);
+  return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
+}
+
+/**
+ * One month of expenses as CSV, oldest first, header row included.
+ * @param {Expense[]} expenses
+ * @param {string} month  YYYY-MM
+ * @returns {string}
+ */
+export function toCsv(expenses, month) {
+  const rows = expenses
+    .filter((e) => e.date.slice(0, 7) === month)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((e) => [e.date, e.amount.toFixed(2), e.category, e.note].map(csvField).join(','));
+  return CSV_BOM + [CSV_HEADER, ...rows].join('\n') + '\n';
 }

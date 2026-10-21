@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -49,6 +49,37 @@ test('GET /api/expenses returns the remaining items on page 2', async () => {
   assert.equal(body.page, 2);
   assert.equal(body.items.length, 2);
   assert.deepEqual(body.items.map((e) => e.id), ['a2', 'a1']);
+});
+
+test('GET /api/expenses searches notes with q', async () => {
+  const body = await (await api('/api/expenses?q=grab')).json();
+  assert.deepEqual(body.items.map((e) => e.id), ['a2']);
+  assert.equal(body.total, 1);
+});
+
+test('GET /api/export returns CSV for the month', async () => {
+  const res = await api('/api/export?month=2026-03');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/csv/);
+  assert.match(res.headers.get('content-disposition'), /expenses-2026-03\.csv/);
+  assert.equal((await res.text()).split('\n').length, 5);
+});
+
+test('GET /api/export rejects a bad month with 400, like /api/summary', async () => {
+  for (const path of ['/api/export?month=2026-13', '/api/export', '/api/summary?month=2026-13']) {
+    const res = await api(path);
+    assert.equal(res.status, 400, path);
+    assert.deepEqual(await res.json(), { error: 'month must be YYYY-MM' });
+  }
+});
+
+test('GET /api/export returns 500 and keeps serving when the data file is unreadable', async () => {
+  writeFileSync(process.env.EXPENSES_FILE, '{not json');
+  const res = await api('/api/export?month=2026-03');
+  assert.equal(res.status, 500);
+  assert.deepEqual(await res.json(), { error: 'internal error' });
+  store.resetFromSeed();
+  assert.equal((await api('/api/export?month=2026-03')).status, 200);
 });
 
 test('GET /api/expenses rejects bad paging', async () => {

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validate, create, remove, list, summary } from '../src/expenses.js';
+import { validate, create, remove, list, summary, toCsv } from '../src/expenses.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 
@@ -110,4 +110,35 @@ test('summary: an expense dated the 1st stays in its month regardless of process
   } finally {
     if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
   }
+});
+
+test('list: q matches notes case-insensitively and paging counts only the matches', () => {
+  const { items, total, hasMore } = list(seed, { q: 'COFFEE' });
+  assert.deepEqual(items.map((e) => e.id), ['a3']);
+  assert.equal(total, 1);
+  assert.equal(hasMore, false);
+});
+
+test('toCsv: BOM, header, then one quoted row per expense in the month, oldest first', () => {
+  const csv = toCsv(seed, '2026-01');
+  assert.ok(csv.startsWith('\ufeff'), 'starts with a UTF-8 BOM so Excel decodes it as UTF-8');
+  const lines = csv.slice(1).trimEnd().split('\n');
+  assert.equal(lines[0], 'date,amount,category,note');
+  assert.equal(lines.length, 5);
+  assert.equal(lines[1], '"2026-01-03","12.50","food","Lunch"');
+});
+
+test('toCsv: quotes delimiters and quotes inside fields and neutralises formula prefixes', () => {
+  const rows = [
+    { id: 'x1', date: '2026-05-01', amount: 1, category: 'food', note: 'Lunch, "team"\nday 2' },
+    { id: 'x2', date: '2026-05-02', amount: 2, category: 'food', note: '=HYPERLINK("http://evil","x")' },
+    { id: 'x3', date: '2026-05-03', amount: 3, category: '+bills', note: '-5' },
+    { id: 'x4', date: '2026-05-04', amount: 4, category: 'fun', note: '@me' },
+  ];
+  const lines = toCsv(rows, '2026-05').slice(1).trimEnd().split('\n');
+  assert.equal(lines.length, 6, 'the embedded newline stays inside its quoted field');
+  assert.equal(lines[1] + '\n' + lines[2], '"2026-05-01","1.00","food","Lunch, ""team""\nday 2"');
+  assert.equal(lines[3], `"2026-05-02","2.00","food","'=HYPERLINK(""http://evil"",""x"")"`);
+  assert.equal(lines[4], `"2026-05-03","3.00","'+bills","'-5"`);
+  assert.equal(lines[5], `"2026-05-04","4.00","fun","'@me"`);
 });

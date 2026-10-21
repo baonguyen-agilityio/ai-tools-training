@@ -1,5 +1,6 @@
 // Minimal client: fetch from the API, render, re-fetch after every mutation.
-const state = { page: 1, limit: 10, category: '' };
+const state = { page: 1, limit: 10, category: '', q: '' };
+let listSeq = 0; // bumped per loadList(); a response for an older request is dropped
 
 const $ = (sel) => document.querySelector(sel);
 const rows = $('#expense-rows');
@@ -18,7 +19,10 @@ async function api(path, init) {
 async function loadList() {
   const params = new URLSearchParams({ page: state.page, limit: state.limit });
   if (state.category) params.set('category', state.category);
+  if (state.q) params.set('q', state.q);
+  const seq = ++listSeq;
   const { items, total, page, limit } = await api(`/api/expenses?${params}`);
+  if (seq !== listSeq) return;
   const pages = Math.max(1, Math.ceil(total / limit));
 
   rows.replaceChildren(
@@ -30,7 +34,7 @@ async function loadList() {
         <td>${escapeHtml(e.date)}</td>
         <td class="amount">${escapeHtml(e.amount)}</td>
         <td>${escapeHtml(e.category)}</td>
-        <td>${escapeHtml(e.note)}</td>
+        <td>${highlight(e.note, state.q)}</td>
         <td><button type="button" data-testid="delete-btn" data-id="${escapeHtml(e.id)}">Delete</button></td>`;
       return tr;
     }),
@@ -43,6 +47,7 @@ async function loadList() {
 async function loadSummary() {
   const month = summaryMonth.value;
   if (!month) return;
+  $('#export-link').href = `/api/export?month=${month}`;
   const { total, byCategory } = await api(`/api/summary?month=${month}`);
   $('#summary-total').textContent = total;
   $('#summary-categories').replaceChildren(
@@ -54,6 +59,25 @@ async function loadSummary() {
       return li;
     }),
   );
+}
+
+/**
+ * Escaped text with every literal, case-insensitive match of the search term
+ * wrapped in <mark>. Matching runs on the raw note and escaping on each piece,
+ * so the term can never match inside an escaped entity like &#39;.
+ */
+function highlight(text, q) {
+  const s = String(text);
+  if (!q) return escapeHtml(s);
+  const lower = s.toLowerCase();
+  const needle = q.toLowerCase();
+  let out = '';
+  let i = 0;
+  for (let j = lower.indexOf(needle, i); j !== -1; j = lower.indexOf(needle, i)) {
+    out += escapeHtml(s.slice(i, j)) + `<mark>${escapeHtml(s.slice(j, j + needle.length))}</mark>`;
+    i = j + needle.length;
+  }
+  return out + escapeHtml(s.slice(i));
 }
 
 function escapeHtml(s) {
@@ -100,6 +124,12 @@ rows.addEventListener('click', async (ev) => {
 
 $('#filter-category').addEventListener('change', (ev) => {
   state.category = ev.target.value.trim();
+  state.page = 1;
+  loadList();
+});
+
+$('#search-note').addEventListener('input', (ev) => {
+  state.q = ev.target.value.trim();
   state.page = 1;
   loadList();
 });
