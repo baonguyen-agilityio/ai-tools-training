@@ -104,11 +104,13 @@ async function handleApi(req, res, url) {
   if (pathname === '/api/export') {
     if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
     const month = readMonth(searchParams);
+    // Build the body before writing headers: a load failure must still reach the 500 handler.
+    const csv = toCsv(store.load(), month);
     res.writeHead(200, {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="expenses-${month}.csv"`,
     });
-    return res.end(toCsv(store.load(), month));
+    return res.end(csv);
   }
 
   throw Object.assign(new Error('not found'), { status: 404 });

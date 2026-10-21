@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -71,6 +71,15 @@ test('GET /api/export rejects a bad month with 400, like /api/summary', async ()
     assert.equal(res.status, 400, path);
     assert.deepEqual(await res.json(), { error: 'month must be YYYY-MM' });
   }
+});
+
+test('GET /api/export returns 500 and keeps serving when the data file is unreadable', async () => {
+  writeFileSync(process.env.EXPENSES_FILE, '{not json');
+  const res = await api('/api/export?month=2026-03');
+  assert.equal(res.status, 500);
+  assert.deepEqual(await res.json(), { error: 'internal error' });
+  store.resetFromSeed();
+  assert.equal((await api('/api/export?month=2026-03')).status, 200);
 });
 
 test('GET /api/expenses rejects bad paging', async () => {
