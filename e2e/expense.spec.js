@@ -204,3 +204,19 @@ test('a slow response for an earlier search term does not overwrite the current 
   await expect(page.getByTestId('expense-row').filter({ hasText: 'STALE' })).toHaveCount(0);
   await expect(page.getByTestId('page-info')).toContainText('(2 total)');
 });
+
+test('highlight never matches inside an escaped character', async ({ page }) => {
+  const note = "Tom's 39 tea";
+  const { id } = await (await page.request.post('/api/expenses', {
+    data: { date: '2026-03-22', amount: 1, category: 'food', note },
+  })).json();
+  try {
+    await page.reload();
+    await page.getByTestId('search-note').fill('39');
+    const cell = page.getByTestId('expense-row').filter({ hasText: 'tea' }).locator('td:nth-child(4)');
+    await expect(cell.locator('mark')).toHaveText(['39']);
+    await expect(cell).toHaveText(note);
+  } finally {
+    await page.request.delete(`/api/expenses/${id}`);
+  }
+});

@@ -61,13 +61,23 @@ async function loadSummary() {
   );
 }
 
-/** Escaped text with every literal match of the search term wrapped in <mark>. */
+/**
+ * Escaped text with every literal, case-insensitive match of the search term
+ * wrapped in <mark>. Matching runs on the raw note and escaping on each piece,
+ * so the term can never match inside an escaped entity like &#39;.
+ */
 function highlight(text, q) {
-  const s = escapeHtml(text);
-  if (!q) return s;
-  // Escape q the same way, then neutralise regex metacharacters so '(' or '.' match literally.
-  const needle = escapeHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return s.replace(new RegExp(needle, 'ig'), (m) => `<mark>${m}</mark>`);
+  const s = String(text);
+  if (!q) return escapeHtml(s);
+  const lower = s.toLowerCase();
+  const needle = q.toLowerCase();
+  let out = '';
+  let i = 0;
+  for (let j = lower.indexOf(needle, i); j !== -1; j = lower.indexOf(needle, i)) {
+    out += escapeHtml(s.slice(i, j)) + `<mark>${escapeHtml(s.slice(j, j + needle.length))}</mark>`;
+    i = j + needle.length;
+  }
+  return out + escapeHtml(s.slice(i));
 }
 
 function escapeHtml(s) {
