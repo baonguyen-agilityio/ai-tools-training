@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expense-tracker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3200,
+      "env": { "PORT": "3200", "EXPENSES_FILE": "/tmp/day11-preview.json" }
+    }
+  ]
+}

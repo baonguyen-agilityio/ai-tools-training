@@ -32,7 +32,7 @@ async function loadList() {
       tr.dataset.id = e.id;
       tr.innerHTML = `
         <td>${escapeHtml(e.date)}</td>
-        <td class="amount">${escapeHtml(e.amount)}</td>
+        <td class="amount">${escapeHtml(money(e.amount))}</td>
         <td>${escapeHtml(e.category)}</td>
         <td>${highlight(e.note, state.q)}</td>
         <td><button type="button" data-testid="delete-btn" data-id="${escapeHtml(e.id)}">Delete</button></td>`;
@@ -49,13 +49,13 @@ async function loadSummary() {
   if (!month) return;
   $('#export-link').href = `/api/export?month=${month}`;
   const { total, byCategory } = await api(`/api/summary?month=${month}`);
-  $('#summary-total').textContent = total;
+  $('#summary-total').textContent = money(total);
   $('#summary-categories').replaceChildren(
     ...Object.entries(byCategory).map(([cat, amt]) => {
       const li = document.createElement('li');
       li.dataset.testid = 'summary-category';
       li.dataset.category = cat;
-      li.textContent = `${cat}: ${amt}`;
+      li.textContent = `${cat}: ${money(amt)}`;
       return li;
     }),
   );
@@ -79,6 +79,9 @@ function highlight(text, q) {
   }
   return out + escapeHtml(s.slice(i));
 }
+
+// Two decimals, same as the CSV export; non-numbers pass through untouched so they still render literally.
+const money = (n) => (typeof n === 'number' ? n.toFixed(2) : n);
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
