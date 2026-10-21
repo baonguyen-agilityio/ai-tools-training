@@ -65,6 +65,14 @@ test('GET /api/export returns CSV for the month', async () => {
   assert.equal((await res.text()).split('\n').length, 5);
 });
 
+test('GET /api/export rejects a bad month with 400, like /api/summary', async () => {
+  for (const path of ['/api/export?month=2026-13', '/api/export', '/api/summary?month=2026-13']) {
+    const res = await api(path);
+    assert.equal(res.status, 400, path);
+    assert.deepEqual(await res.json(), { error: 'month must be YYYY-MM' });
+  }
+});
+
 test('GET /api/expenses rejects bad paging', async () => {
   assert.equal((await api('/api/expenses?page=0')).status, 400);
   assert.equal((await api('/api/expenses?limit=abc')).status, 400);

@@ -33,6 +33,15 @@ async function readJson(req) {
   }
 }
 
+/** The validated month=YYYY-MM query param, or a 400 error. */
+function readMonth(searchParams) {
+  const month = searchParams.get('month') ?? '';
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw Object.assign(new Error('month must be YYYY-MM'), { status: 400 });
+  }
+  return month;
+}
+
 /** Serve a file under public/; "/" maps to index.html. */
 async function serveStatic(res, pathname) {
   const rel = pathname === '/' ? 'index.html' : pathname.slice(1);
@@ -89,17 +98,12 @@ async function handleApi(req, res, url) {
 
   if (pathname === '/api/summary') {
     if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
-    const month = searchParams.get('month') ?? '';
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
-      throw Object.assign(new Error('month must be YYYY-MM'), { status: 400 });
-    }
-    return sendJson(res, 200, summary(store.load(), month));
+    return sendJson(res, 200, summary(store.load(), readMonth(searchParams)));
   }
 
   if (pathname === '/api/export') {
     if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
-    const month = searchParams.get('month') ?? '';
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('month must be YYYY-MM');
+    const month = readMonth(searchParams);
     res.writeHead(200, {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="expenses-${month}.csv"`,
