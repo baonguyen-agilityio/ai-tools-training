@@ -106,6 +106,18 @@ export function summary(expenses, month) {
 }
 
 const CSV_HEADER = 'date,amount,category,note';
+// Byte-order mark: without it Excel reads a double-clicked .csv as the legacy ANSI codepage.
+const CSV_BOM = '\ufeff';
+
+/**
+ * RFC 4180 field: always quoted, inner quotes doubled. A leading = + - @ is
+ * prefixed with an apostrophe so spreadsheets show it as text, not a formula.
+ * @param {unknown} value
+ */
+function csvField(value) {
+  const s = String(value);
+  return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
+}
 
 /**
  * One month of expenses as CSV, oldest first, header row included.
@@ -117,6 +129,6 @@ export function toCsv(expenses, month) {
   const rows = expenses
     .filter((e) => e.date.slice(0, 7) === month)
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((e) => [e.date, e.amount.toFixed(2), e.category, e.note].join(','));
-  return [CSV_HEADER, ...rows].join('\n') + '\n';
+    .map((e) => [e.date, e.amount.toFixed(2), e.category, e.note].map(csvField).join(','));
+  return CSV_BOM + [CSV_HEADER, ...rows].join('\n') + '\n';
 }

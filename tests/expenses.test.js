@@ -119,9 +119,26 @@ test('list: q matches notes case-insensitively and paging counts only the matche
   assert.equal(hasMore, false);
 });
 
-test('toCsv: header plus one row per expense in the month, oldest first', () => {
-  const lines = toCsv(seed, '2026-01').trimEnd().split('\n');
+test('toCsv: BOM, header, then one quoted row per expense in the month, oldest first', () => {
+  const csv = toCsv(seed, '2026-01');
+  assert.ok(csv.startsWith('\ufeff'), 'starts with a UTF-8 BOM so Excel decodes it as UTF-8');
+  const lines = csv.slice(1).trimEnd().split('\n');
   assert.equal(lines[0], 'date,amount,category,note');
   assert.equal(lines.length, 5);
-  assert.equal(lines[1], '2026-01-03,12.50,food,Lunch');
+  assert.equal(lines[1], '"2026-01-03","12.50","food","Lunch"');
+});
+
+test('toCsv: quotes delimiters and quotes inside fields and neutralises formula prefixes', () => {
+  const rows = [
+    { id: 'x1', date: '2026-05-01', amount: 1, category: 'food', note: 'Lunch, "team"\nday 2' },
+    { id: 'x2', date: '2026-05-02', amount: 2, category: 'food', note: '=HYPERLINK("http://evil","x")' },
+    { id: 'x3', date: '2026-05-03', amount: 3, category: '+bills', note: '-5' },
+    { id: 'x4', date: '2026-05-04', amount: 4, category: 'fun', note: '@me' },
+  ];
+  const lines = toCsv(rows, '2026-05').slice(1).trimEnd().split('\n');
+  assert.equal(lines.length, 6, 'the embedded newline stays inside its quoted field');
+  assert.equal(lines[1] + '\n' + lines[2], '"2026-05-01","1.00","food","Lunch, ""team""\nday 2"');
+  assert.equal(lines[3], `"2026-05-02","2.00","food","'=HYPERLINK(""http://evil"",""x"")"`);
+  assert.equal(lines[4], `"2026-05-03","3.00","'+bills","'-5"`);
+  assert.equal(lines[5], `"2026-05-04","4.00","fun","'@me"`);
 });
