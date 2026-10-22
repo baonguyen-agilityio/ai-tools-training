@@ -1,6 +1,7 @@
 # REQ-002: Monthly budget with warning — spec
 
-**Source:** `docs/backlog/REQ-002.md` (Minh, Ops) + client interview with Linh (Finance), 2026-10-22.
+**Source:** `docs/backlog/REQ-002.md` (Minh, Ops) + client interview with Linh (Finance), 2026-10-22,
++ developer pre-implementation review (36 questions, answered in “Review decisions” below).
 **Status:** accepted, not implemented. Tickets: `docs/backlog/REQ-002a.md` … `REQ-002g.md`. Tests: `docs/specs/REQ-002-test-matrix.md`.
 
 ## Problem
@@ -16,7 +17,7 @@ notion of "remaining", no accounts.
 ## Decisions
 
 Numbered to match Linh's answers (D1 = answer 1). D3a, D6a, D10a are BA interpretations needed to
-make an answer implementable; they are listed so they can be challenged.
+make an answer implementable. Review decisions R1–R36 refine these and win on conflict.
 
 | # | Decision |
 |---|----------|
@@ -24,98 +25,113 @@ make an answer implementable; they are listed so they can be challenged.
 | D2 | State per budget line: `ok` below 80 %, `warn` (amber) at ≥ 80 % and < 100 %, `over` (red) at ≥ 100 %. No pace / burn-rate projection. |
 | D3 | Budget is set per month, not one standing number. |
 | D3a | A month with no saved budget uses the nearest earlier month that has one (“inherited”). The API says where it came from (`source`), the UI pre-fills the form with it and marks it “copied from YYYY-MM, not saved”. Saving writes that month only. Rationale: “previous month” must chain across a skipped month or December would lose November's number because nobody opened November. |
-| D4 | Status shows in the Monthly summary section, and one plain line appears under the add form right after an expense is added when that expense's category cap or the overall budget is in `warn` or `over` for the expense's month. No popups, no blocking. |
+| D4 | Status shows in the Monthly summary section. Right after an expense is added, one plain line appears under the add form **per budget line** (the expense's category cap, then the overall) that is `warn` or `over` for the expense's month; nothing when both are `ok`. No popups, no blocking. |
 | D5 | Adding is never blocked by a budget. |
 | D6 | Remaining is shown as `Left: 120.00` when ≥ 0 and `Over by 35.50` when < 0. Not in the CSV export. |
 | D6a | At exactly 100 % the state is `over` (red) and the text is `Left: 0.00`. |
 | D7 | No accounts: anyone with the page can set or change a budget. Revisit with REQ-003. |
 | D8 | Caps are accepted only for `food`, `transport`, `bills`, `fun` (the datalist in `public/index.html`). Any other key is a 400. Expenses in other categories count toward the overall only. |
 | D9 | A month earlier than the first month that ever had a budget saved has no budget: no numbers, no colour, no post-add line. |
-| D10 | Demo on 2026-10 with food-heavy seed data; food lands around 90 % of its cap. |
-| D10a | `npm run seed` also resets the budget file, so the demo is reproducible. |
+| D10 | Demo on 2026-10 with food-heavy demo data; food at 90 % of its cap, overall at 88 %. |
+| D10a | Demo data lives in separate files (`data/demo-seed.json`, `data/demo-budgets.json`) loaded by `npm run seed:demo`. `data/seed.json` and every existing test stay untouched. |
 
-Shared rules, derived from the existing code:
+Shared rules:
 
-- Money is handled in integer cents the way `summary()` already does; thresholds compare
-  `spentCents * 100 >= budgetCents * 80` (and `* 100`), never floats.
+- **Money (R1).** On the wire (API request and response bodies) amounts are currency numbers with
+  at most two decimals, exactly like `amount` today (`1500`, `179.5`). Everywhere else — validation
+  output, the budgets file, `src/budget.js`, thresholds, `pct`, `left` — money is **integer cents**.
+  Conversion happens once on the way in (`validateBudget`) and once on the way out (`toWire`).
+- Thresholds: `spentCents * 100 >= budgetCents * 80` → `warn`, `spentCents >= budgetCents` → `over`.
+- `pct = Math.floor(spentCents * 100 / budgetCents)` (integer math, R10). No upper bound.
 - Budget amounts are validated like `amount` in `validate()`: finite, > 0, rounded to cents.
   A cap larger than the overall total is allowed (no rule asked for).
-- Displayed percentage is `floor(spent / budget * 100)` so 99.6 % never reads “100 %”.
 - A category cap and the overall are independent lines; each has its own state.
 
 ## Data shape
 
-New file `data/budgets.json`, keyed by month. Only saved months are stored; inheritance (D3a) is
-computed, never written.
+New file `data/budgets.json`, keyed by month, **values in integer cents** (R1). Only saved months
+are stored; inheritance (D3a) is computed, never written.
 
 ```json
 {
-  "2026-10": { "total": 1500, "categories": { "food": 500, "fun": 150 } },
-  "2026-12": { "total": 2500, "categories": { "food": 900, "fun": 600 } }
+  "2026-10": { "total": 150000, "categories": { "food": 50000, "fun": 15000 } },
+  "2026-12": { "total": 250000, "categories": { "food": 90000, "fun": 60000 } }
 }
 ```
 
-- `total`: required, > 0, cents.
-- `categories`: optional object, keys ⊂ {food, transport, bills, fun}, values > 0, cents. Omit a key
-  to remove that cap.
-- Path override: `BUDGETS_FILE` env var, same contract as `EXPENSES_FILE`. Tests and e2e must
-  always point it at a temp file; `data/budgets.json` is never touched by tests.
-- Seed: `data/seed-budgets.json`; `npm run seed` copies both seed files (D10a).
+- `total`: required, integer > 0 (cents).
+- `categories`: optional object, keys ⊂ {food, transport, bills, fun}, integer values > 0. Omit a
+  key to remove that cap.
+- Keys that do not match `MONTH_RE` are ignored when resolving (R6). A file that is not valid JSON
+  makes `loadBudgets()` throw, like `load()` (R5).
+- Path override: `BUDGETS_FILE` env var, same contract as `EXPENSES_FILE`. Every test file, the
+  Playwright web server and the MCP test pass a temp path (R2, R3); the guard hook blocks
+  `data/budgets.json` the same way it blocks `data/expenses.json` (R4); the file is git-ignored (R3).
+- Seeds: `data/seed-budgets.json` (committed, `{}`) for tests and `npm run seed`;
+  `data/demo-budgets.json` for `npm run seed:demo` (R33).
 
 Effective budget for month `M`:
 
 1. `budgets[M]` if present → `source = M`.
-2. Else the entry with the greatest key `< M` → `source = that key` (inherited).
+2. Else the entry with the greatest valid key `< M` → `source = that key` (inherited).
 3. Else none → `budget = null, source = null` (D9).
 
 ## API sketch
 
 All months validated with the existing `MONTH_RE`; bad month → `400 {"error":"month must be YYYY-MM"}`.
+Response amounts are currency (R1).
 
 ### `GET /api/budget?month=YYYY-MM`
 
-Effective budget for the month.
+Effective budget for the month. `200` for every valid month; `400` only for a bad month (R12).
 
 ```json
 { "month": "2026-11", "source": "2026-10", "budget": { "total": 1500, "categories": { "food": 500, "fun": 150 } } }
 ```
 
-`"source": null, "budget": null` when none (D9). Always 200.
+`"source": null, "budget": null` when none (D9).
 
 ### `PUT /api/budget?month=YYYY-MM`
 
 Body `{ "total": 1500, "categories": { "food": 500 } }`. Full replace of that month. Returns
-`200` with the same shape as GET (`source` = the month). `400` on: invalid JSON, missing or
-non-positive `total`, non-positive cap, cap key outside the four (D8), unknown top-level keys
-ignored. No DELETE (edit the numbers instead; removal is out of scope).
+`200` with the same shape as GET (`source` = the month). `400` on: invalid JSON
+(`invalid JSON body`, existing text), body not a plain object (`body must be an object`), missing
+or non-positive `total`, `categories` not a plain object, cap key outside the four after
+trim + lowercase (D8, R7), non-positive cap. Unknown top-level keys are ignored. Error precedence
+in R8. No DELETE (edit the numbers instead; removal is out of scope).
 
 ### `GET /api/summary?month=YYYY-MM` (extended)
 
-Existing fields unchanged. New `budget` field:
+Existing fields unchanged. New `budget` field, composed by `summaryWithBudget()` in `src/budget.js`
+and used by both the HTTP route and the MCP `monthly_summary` tool (R14, R16):
 
 ```json
 {
-  "month": "2026-10", "total": 1320.5, "byCategory": { "food": 450, "transport": 120.5, "coffee": 30 },
+  "month": "2026-10", "total": 1320.5,
+  "byCategory": { "food": 450, "transport": 120.5, "bills": 620, "fun": 100, "coffee": 30 },
   "budget": {
     "source": "2026-10",
     "total": { "budget": 1500, "spent": 1320.5, "left": 179.5, "pct": 88, "state": "warn" },
     "categories": {
       "food": { "budget": 500, "spent": 450, "left": 50, "pct": 90, "state": "warn" },
-      "fun":  { "budget": 150, "spent": 0,   "left": 150, "pct": 0, "state": "ok" }
+      "fun":  { "budget": 150, "spent": 100, "left": 50, "pct": 66, "state": "ok" }
     }
   }
 }
 ```
 
 - `budget` is `null` when the month has no effective budget (D9).
-- `categories` lists only capped categories; a capped category with no spend shows `spent: 0`.
+- `categories` lists only capped categories, in the fixed order food, transport, bills, fun (R11);
+  a capped category with no spend shows `spent: 0`.
 - `left` may be negative (`Over by` in the UI, D6). `state` ∈ `ok | warn | over` (D2, D6a).
-- CSV export unchanged (D6).
+- CSV export unchanged (D6). An unreadable budgets file makes this route a 500 (R15).
 
-Domain: new pure module `src/budget.js` (same rules as `src/expenses.js`: no I/O):
-`effectiveBudget(budgets, month)`, `validateBudget(input)`, `budgetStatus(expenses, budgets, month)`.
-`src/store.js` gains `loadBudgets()` / `saveBudgets()` and resets both files in `resetFromSeed()`.
-`src/server.js` composes `summary()` + `budgetStatus()`.
+Domain: new pure module `src/budget.js` (same rules as `src/expenses.js`: no I/O). It imports
+`monthCents()` from `src/expenses.js`, never the reverse (R16). Exports: `BUDGET_CATEGORIES`,
+`validateBudget(input) → cents`, `effectiveBudget(budgets, month) → { source, budget(cents) }`,
+`toWire(budgetCents)`, `budgetStatus(expenses, budgets, month)`, `summaryWithBudget(expenses, budgets, month)`.
+`src/store.js` gains `loadBudgets()` / `saveBudgets()` / `budgetsFile()` and resets both files in
+`resetFromSeed({ demo })`.
 
 ## UI sketch
 
@@ -124,36 +140,50 @@ Monthly summary section (month picker already exists, `data-testid="summary-mont
 ```
 Monthly summary      Month [2026-10]
 Budget  total [1500.00]  food [500.00]  transport [    ]  bills [    ]  fun [150.00]  [Save]
-        (copied from 2026-09, not saved)              ← only when source ≠ month
-        Saved for 2026-10.                            ← after a successful save
+        copied from 2026-09, not saved                ← budget-source, only when source ≠ month
+        Saved for 2026-10.                            ← budget-saved, after a successful save
 
-Total: 1320.50 / 1500.00   Left: 179.50        ← amber (warn)
+Total: 1320.50 / 1500.00 (Left: 179.50)        ← amber (warn)
 Export CSV
-• food: 450.00 / 500.00   Left: 50.00          ← amber
+• food: 450.00 / 500.00 (Left: 50.00)          ← amber
 • transport: 120.50                            ← no cap, as today
-• fun: 0.00 / 150.00   Left: 150.00            ← green/neutral (ok); shown even with no spend
+• bills: 620.00
+• fun: 100.00 / 150.00 (Left: 50.00)           ← ok: no colour
 • coffee: 30.00                                ← no cap (D8)
 ```
 
-- No budget (D9): form empty, no “copied from” note, total and category lines exactly as today.
-- Colour comes from `data-state="ok|warn|over"` on the line; CSS maps to neutral / amber / red.
-  Text carries the information too (`Left` / `Over by`), colour is not the only signal.
+- Category lines: `byCategory` in its existing order, then capped categories with no spend appended
+  in the fixed order food, transport, bills, fun (R11, R24).
+- No budget (D9): form empty, `budget-source` hidden, total and category lines exactly as today.
+- `data-state="ok|warn|over"` sits on the `summary-total` `<strong>` and on each capped
+  `summary-category` `<li>` (R23). CSS colours only `warn` (`#8a5a00`) and `over` (`#b00020`,
+  the existing `.error` red); `ok` has no rule (R25). Text carries the information too.
 - Test ids: `budget-form`, `budget-total`, `budget-cap-<category>`, `budget-save`, `budget-source`,
-  `budget-error`, `summary-total` (existing, gains `data-state`), `summary-category` (existing,
-  gains `data-state` when capped).
+  `budget-saved`, `budget-error`, `summary-total` (existing, gains `data-state`),
+  `summary-category` (existing, gains `data-state` when capped).
 
-Add form, after a successful add (D4):
+Add form, after a successful add (D4, R27, R28):
 
 ```
 [Add]
-food: over budget (Over by 35.50)        ← data-testid="budget-notice", red
-total: 88 % of budget (Left: 179.50)     ← second line only when the overall is warn/over
+• food: over budget (Over by 35.50)       ← budget-notice-line, data-line="food", data-state="over"
+• total: 88% of budget (Left: 179.50)     ← budget-notice-line, data-line="total", data-state="warn"
 ```
 
+- `budget-notice` is a `<ul hidden>`; each line is an `<li data-testid="budget-notice-line">` with
+  its own `data-line` and `data-state`. Category line first, total line second. The list is hidden
+  when it has no lines.
 - Computed for the **expense's month** (from its date), not the summary picker month.
-- Hidden when the month has no budget, when both lines are `ok`, and cleared on the next add.
-- Category line only when that category has a cap.
-- Sticky until the next add or reload; no timer, no popup.
+- Hidden when the month has no budget, when every line is `ok`, and when the status fetch fails
+  (R29). Replaced on the next successful add; untouched by a failed add. No timer, no popup.
+- Category line only when that category has a cap. Percent is written `88%` (no space, R26).
+
+## Demo (R33)
+
+`npm run seed:demo` copies `data/demo-seed.json` → expenses file and `data/demo-budgets.json` →
+budgets file. Demo October 2026 reproduces the summary example above exactly: total 1320.50
+(food 450.00, transport 120.50, bills 620.00, fun 100.00, coffee 30.00), budget total 1500 with
+caps food 500 and fun 150. `data/seed.json`, `data/seed-budgets.json` and all tests are untouched.
 
 ## Out of scope
 
@@ -166,3 +196,48 @@ total: 88 % of budget (Left: 179.50)     ← second line only when the overall i
 - Blocking or confirming an expense that goes over (D5).
 - Currency formatting beyond the existing two decimals.
 - Budget history / audit of changes.
+- Validating the shape of a hand-edited budgets file beyond JSON parsing (R5).
+
+## Review decisions
+
+Tech-lead answers to the developer review of 2026-10-22, one per question id. Guiding constraints:
+no test, e2e run or hook may touch `data/budgets.json`; money is integer cents except on the wire.
+
+| # | Q | Decision |
+|---|---|----------|
+| R1 | a-1 | Wire = currency numbers ≤ 2 decimals (as `amount`). File, `src/budget.js`, all arithmetic = integer cents. `validateBudget` converts in, `toWire` converts out. Spec examples fixed accordingly. |
+| R2 | a-2 | Ticket a sets `process.env.BUDGETS_FILE` to a temp path in `tests/api.test.js`, `tests/store.test.js` and the spawned `env` in `tests/mcp.test.js`, in the same commit that makes `resetFromSeed` copy both seeds. |
+| R3 | a-3 | Ticket a also adds `BUDGETS_FILE` (temp) to `playwright.config.js` `webServer.env` and `data/budgets.json` to `.gitignore`. Nothing waits for d. |
+| R4 | a-4 | Ticket a extends `.claude/hooks/guard-never-rules.js` (regex `data/(expenses\|budgets)\.json`, message names both env vars) and `tests/guard-hook.test.js`; CLAUDE.md “Never” list and README mention both files. |
+| R5 | a-5 | `loadBudgets()` throws on unparsable JSON (same as `load()`) → 500 at the API. Shape of a parsed file is trusted, not validated (only `saveBudgets` writes it). |
+| R6 | a-6 | `effectiveBudget` ignores keys that do not match `MONTH_RE`; valid keys compare as strings. |
+| R7 | a-7 | Cap keys are trimmed and lowercased, then must be one of the four. `categories` present but not a plain object → `categories must be an object`. Body not a plain object → `body must be an object`. |
+| R8 | a-8 | Validation order: body type → `total` → `categories` type → keys in insertion order, per key name then value. `{ coffee: 0 }` → category message; `{ coffee: 10, food: 0 }` → category message for `coffee`. |
+| R9 | a-9 | `resetFromSeed` byte-copies both seeds (`copyFileSync`); AC12 checks deep equality via `loadBudgets()`. Pattern reference fixed to `tests/store.test.js`. |
+| R10 | c-1 | `pct = Math.floor(spentCents * 100 / budgetCents)`. No bound; a tiny budget may yield a huge `pct`, displayed as is. |
+| R11 | c-2 | `budget.categories` ordered by the fixed four (food, transport, bills, fun), capped only. UI appends unspent capped categories after the `byCategory` lines in that order. |
+| R12 | b-3 | `GET /api/budget` is 200 for every valid month (budget may be `null`), 400 only for a bad month. Spec wording fixed. |
+| R13 | b-1 | Bad JSON keeps the existing `invalid JSON body`. `null` / array / number bodies → 400 `body must be an object` (from `validateBudget`). The same hole in `POST /api/expenses` is out of scope. |
+| R14 | c-3 | MCP `monthly_summary` gains `budget` so README stays true. Ticket c changes `mcp/expenses-server.js` to call `summaryWithBudget()`, passes `BUDGETS_FILE` in `tests/mcp.test.js`; `.mcp.json` stays `env: {}` (inherits the shell). |
+| R15 | c-4 | Unreadable budgets file → `/api/summary` 500, consistent with R5 and the existing expenses behaviour. No degrade. |
+| R16 | c-5 | `src/expenses.js` exports `monthCents(expenses, month) → { cents, byCategory }` (cents) and `summary()` uses it. `src/budget.js` imports from `src/expenses.js`; the reverse never happens. Both stay pure. |
+| R17 | b-2 | Ticket b adds an “HTTP API” table to README (all routes, one row each) and the MCP table keeps “same as `GET /api/summary`”. |
+| R18 | d-1 | Client sends numbers (`Number(value)`) for filled fields, omits empty caps. e2e asserts numeric body. |
+| R19 | d-2 | New `<p data-testid="budget-saved" hidden>`; shown after a successful save, hidden on month change and when a save starts. |
+| R20 | d-3 | `budget-source` text is exactly `copied from 2026-10, not saved` (no parentheses). Sketch fixed. |
+| R21 | d-4 | e2e budget tests save only months ≥ `2026-10`; existing specs use ≤ `2026-04` and stay untouched by D9. `e2e/budget.spec.js` `beforeEach` PUTs the spec example budget for `2026-10` as baseline and `afterEach` deletes every expense it created. “No budget” cases use `2026-01`. |
+| R22 | d-5 | d-AC1 reworded: the test fills `summary-month` with `2026-10`; nothing depends on the wall clock. |
+| R23 | e-1 | `data-state` on the `summary-total` `<strong>` and on each capped `summary-category` `<li>`; CSS targets `[data-state]`. Format `1320.50 / 1500.00 (Left: 179.50)`, single spaces, parentheses, matching the notice. |
+| R24 | e-2 | See R11: `byCategory` order first, then unspent capped categories appended in fixed order. |
+| R25 | e-3 | Linh: `ok` = no colour. CSS only `[data-state="warn"] { color: #8a5a00 }` and `[data-state="over"] { color: #b00020 }`. e2e asserts `toHaveCSS('color', …)`: warn `rgb(138, 90, 0)`, over `rgb(176, 0, 32)`, ok = body colour `rgb(34, 34, 34)`. Attribute `data-state="ok"` still set. |
+| R26 | f-1 | `88%` without a space, everywhere. Spec fixed. |
+| R27 | f-2 | Linh: `budget-notice` is a `<ul>`; one `<li data-testid="budget-notice-line" data-line data-state>` per `warn`/`over` line, category first then total. |
+| R28 | f-3 | D4 reworded: one line **per** budget line that is `warn` or `over`; nothing when all `ok`. |
+| R29 | f-4 | A failed status fetch after a successful add hides the notice silently: no `form-error`, no `pageerror`. |
+| R30 | d-6 | d's e2e fixtures come from a `PUT` in `beforeEach` (R21), never from a seed. `data/seed-budgets.json` stays `{}`. |
+| R31 | d-7 | d-AC9 asserts on `budget-form` only: its bounding-box width ≤ viewport width at 390 px. |
+| R32 | e-4 | e-AC10 reworded: existing assertions pass because the months they use (≤ `2026-04`) have no effective budget. |
+| R33 | g-1, g-2, g-3 | Linh: demo in `data/demo-seed.json` + `data/demo-budgets.json`, loaded by `npm run seed:demo` (`store.resetFromSeed({ demo: true })`). `data/seed.json` and every existing test untouched. Demo figures = spec example (food 90 %, overall 88 %). |
+| R34 | g-4 | g-AC6 measurable: ≥ 12 October rows on ≥ 8 distinct days, checked by a unit test over the demo file. “Realistic” dropped. |
+| R35 | a-5, c-4 follow-up | Demo files are verified by tests that copy them to temp paths; `npm run seed:demo` itself is never run by tests. |
+| R36 | f-2 follow-up | A capped category that is `ok` while the total is `warn` shows only the total line; `data-line` values are the category slug or `total`. |
