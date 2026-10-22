@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as store from './store.js';
-import { create, remove, list, summary, toCsv } from './expenses.js';
+import { create, remove, list, summary, toCsv, MONTH_RE } from './expenses.js';
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public/', import.meta.url)));
 const MIME = {
@@ -36,7 +36,7 @@ async function readJson(req) {
 /** The validated month=YYYY-MM query param, or a 400 error. */
 function readMonth(searchParams) {
   const month = searchParams.get('month') ?? '';
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+  if (!MONTH_RE.test(month)) {
     throw Object.assign(new Error('month must be YYYY-MM'), { status: 400 });
   }
   return month;

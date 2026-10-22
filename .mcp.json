@@ -15,6 +15,14 @@
       "headers": {
         "Authorization": "Bearer ${GITHUB_PAT}"
       }
+    },
+    "expenses": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "mcp/expenses-server.js"
+      ],
+      "env": {}
     }
   }
 }

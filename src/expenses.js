@@ -12,6 +12,8 @@ import { randomUUID } from 'node:crypto';
  */
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Month key as used by summary/export/MCP tools. */
+export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 /** Round a user-supplied amount to cents. */
 const round2 = (n) => Math.round(n * 100) / 100;
 /** True only for real calendar days: Date.parse rolls 2026-02-31 over to March 3, so round-trip it. */
