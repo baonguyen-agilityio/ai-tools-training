@@ -39,3 +39,13 @@ test('MCP server: lists tools, summarises a month, rejects a bad month', async (
     /month must be YYYY-MM/,
   );
 });
+
+test('MCP server: search_expenses finds by note, rejects an empty q', async () => {
+  const res = await client.callTool({ name: 'search_expenses', arguments: { q: 'coffee' } });
+  assert.deepEqual(JSON.parse(res.content[0].text).items.map((e) => e.id), ['a3']);
+
+  await assert.rejects(
+    client.callTool({ name: 'search_expenses', arguments: { q: '   ' } }),
+    /q must not be empty/,
+  );
+});

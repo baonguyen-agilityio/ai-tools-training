@@ -49,12 +49,14 @@ function monthlySummary(args) {
 
 /** @param {Record<string, unknown>} args */
 function searchExpenses(args) {
+  const q = String(args.q ?? '').trim();
+  if (!q) throw new McpError(ErrorCode.InvalidParams, 'q must not be empty');
   const page = args.page === undefined ? 1 : Number(args.page);
   if (!Number.isInteger(page) || page < 1) {
     throw new McpError(ErrorCode.InvalidParams, 'page must be a positive integer');
   }
   const category = args.category === undefined ? undefined : String(args.category);
-  return json(list(store.load(), { q: String(args.q ?? ''), category, page }));
+  return json(list(store.load(), { q, category, page }));
 }
 
 export const server = new Server({ name: 'expenses', version: '0.1.0' }, { capabilities: { tools: {} } });
