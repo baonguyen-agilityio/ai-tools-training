@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Stack
-Node >= 22 (`.nvmrc`), ESM, zero runtime deps. `node:http` server, plain JS UI, JSON file store. Only dev dep: `@playwright/test`.
+Node >= 22 (`.nvmrc`), ESM, zero runtime deps. `node:http` server, plain JS UI, JSON file store. Dev deps: `@playwright/test`, `@modelcontextprotocol/sdk`.
 
 ## Commands
 - `npm start` — serve on http://localhost:3000 (`PORT` to override)

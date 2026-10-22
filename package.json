@@ -14,6 +14,7 @@
     "seed": "node -e \"import('./src/store.js').then(s => s.resetFromSeed())\""
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@playwright/test": "^1.49.0"
   }
 }

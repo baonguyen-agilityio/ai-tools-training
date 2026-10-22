@@ -48,3 +48,16 @@ docs/       backlog tickets and project docs
 - `data/expenses.json` is local state. Reset with `npm run seed`.
 - Bug tickets live in `docs/backlog/`. Treat them as reports from a user, not as hints.
 - CI runs `npm test` and `npm run test:e2e` on every push.
+
+## MCP server
+
+`mcp/expenses-server.js` exposes the expense data to Claude Code over stdio (read-only, honours `EXPENSES_FILE`). It is registered in `.mcp.json` as `expenses`.
+
+| Tool | Input | Returns |
+|------|-------|---------|
+| `monthly_summary` | `month: "YYYY-MM"` | total and per-category totals, same as `GET /api/summary` |
+| `search_expenses` | `q`, optional `category`, `page` | matching expenses newest first, same as `GET /api/expenses` |
+
+A malformed month is rejected with an MCP `InvalidParams` error, like the API's 400.
+
+Approve it once per clone: start `claude` in the repo, accept the prompt for the project `.mcp.json` servers (or run `/mcp` and enable `expenses`). Then ask e.g. "what did I spend in 2026-02?". Tested in `tests/mcp.test.js`, which runs under `npm test`.
