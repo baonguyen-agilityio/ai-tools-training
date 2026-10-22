@@ -245,11 +245,11 @@ no test, e2e run or hook may touch `data/budgets.json`; money is integer cents e
 | R32 | e-4 | e-AC9 reworded: existing assertions pass because the months they use (≤ `2026-04`) have no effective budget. |
 | R33 | g-1, g-2, g-3 | Linh: demo in `data/demo-seed.json` + `data/demo-budgets.json`, loaded by `npm run seed:demo` (`store.resetFromSeed({ demo: true })`). `data/seed.json` and every existing test untouched. Demo figures = spec example (food 90 %, overall 88 %). |
 | R34 | g-4 | g-AC6 measurable: ≥ 12 October rows on ≥ 8 distinct days, checked by a unit test over the demo file. “Realistic” dropped. |
-| R35 | a-5, c-4 follow-up | Demo files are verified by tests that copy them to temp paths; `npm run seed:demo` itself is never run by tests. |
+| R35 | g follow-up | Demo files are verified by tests that copy them to temp paths; `npm run seed:demo` itself is never run by tests. |
 | R36 | f-2 follow-up | A capped category that is `ok` while the total is `warn` shows only the total line; `data-line` values are the category slug or `total`. |
 | R37 | a-1 (round 2) | Ticket a commits placeholder `data/demo-seed.json` (copy of `seed.json`) and `data/demo-budgets.json` (`{}`); ticket g overwrites them with the demo data. |
 | R38 | a-2 (round 2) | Unknown-category message includes the key: `coffee: category must be one of food, transport, bills, fun`. Applied to a-AC10, a-AC15, b-AC10 and d-AC7. |
-| R39 | d-1 (round 2) | d-AC4 saves `2027-01`, a month no other test reads; d-AC5 is self-contained. |
+| R39 | d-1 (round 2) | d-AC4 saves `2027-01`, d-AC5 saves `2027-02`; d-AC5 is self-contained. Spec-file invariant: saving tests use months ≥ `2027-01`, inherited-state reads use `2026-11` / `2026-12` only. |
 | R40 | d-2 (round 2) | d-AC8 asserts `budget-cap-fun` is empty after reload and `GET /api/budget?month=2026-10` has no `fun` cap. |
 | R41 | f-1 (round 2) | Post-add lines reuse the `loadSummary()` response when the expense month equals the picker month; a separate fetch only otherwise. f-AC11 dates the expense in a different month and aborts that separate fetch. |
 

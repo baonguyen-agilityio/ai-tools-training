@@ -30,7 +30,7 @@ implementing PR.
 | a-AC15 | Error precedence: total before categories; keys in insertion order, message names the key | unit | |
 | a-AC16 | `loadBudgets()` throws on unparsable JSON | unit | |
 | a-AC17 | `resetFromSeed()` and `resetFromSeed({ demo: true })` reset both temp files | unit | |
-| a-AC18 | Every suite sets `BUDGETS_FILE` to a temp path (api, store, mcp env, playwright env) | review | |
+| a-AC18 | Every suite sets `BUDGETS_FILE` to a temp path; `budgetsFile()` / `dataFile()` outside `data/` during tests | unit + review | |
 | a-AC19 | `.gitignore` lists `data/budgets.json` | review | |
 | a-AC20 | Hook blocks Bash / Write / Edit on `data/budgets.json`; `npm run seed`, `seed:demo` allowed | hook | |
 | a-AC21 | `monthCents()` exported; `summary()` output unchanged | unit (existing summary tests) | |
@@ -53,7 +53,7 @@ implementing PR.
 | b-AC10 | PUT no total / total ≤ 0 / `0.004` / cap ≤ 0 / `categories: []` / cap `coffee` (keyed message) / duplicate keys → 400, nothing written | API | |
 | b-AC11 | POST/DELETE `/api/budget` → 405 | API | |
 | b-AC12 | Unparsable budgets file → 500, server keeps serving | API | |
-| b-AC13 | README “HTTP API” table lists every route | review | |
+| b-AC13 | README “HTTP API” table has the seven routes | review | |
 
 ## REQ-002c — status in summary
 
@@ -73,7 +73,7 @@ implementing PR.
 | c-AC12 | Integer `pct` (0.29 / 1.00 → 29) and float trap (3 × 0.10 vs 0.30 → `over`, `left: 0`) | unit | |
 | c-AC13 | CSV export identical with and without a budget | API | |
 | c-AC14 | Unparsable budgets file → `/api/summary` 500 | API | |
-| c-AC15 | MCP `monthly_summary` equals the HTTP body including `budget` | MCP | |
+| c-AC15 | MCP `monthly_summary` deep-equals `summaryWithBudget()` over the same temp files | MCP | |
 
 ## REQ-002d — set budget UI
 
@@ -83,7 +83,7 @@ implementing PR.
 | d-AC2 | **Copied from previous month**: fields pre-filled, note exactly `copied from 2026-10, not saved` | e2e | |
 | d-AC3 | **No budget set** (`2026-01`): fields empty, note hidden | e2e | |
 | d-AC4 | Save on `2027-01` sends numeric PUT body, empty caps omitted, `budget-saved` shows `Saved for 2027-01.` | e2e | |
-| d-AC5 | Saving `2026-11` leaves `2026-10` unchanged; `budget-saved` and `budget-error` hidden on month change | e2e | |
+| d-AC5 | Saving `2027-02` leaves `2026-10` unchanged; `budget-saved` and `budget-error` hidden on month change | e2e | |
 | d-AC6 | Empty / 0 total blocked by native validation, no request | e2e | |
 | d-AC7 | Routed 400 (keyed category message) shown in `budget-error`, inputs keep values; hidden again on save start and month change | e2e | |
 | d-AC8 | Clearing `fun` and saving omits it from the body; field empty after reload; `GET /api/budget` has no `fun` | e2e | |

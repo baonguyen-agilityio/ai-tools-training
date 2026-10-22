@@ -27,7 +27,7 @@ Response amounts are currency (R1).
 - **AC12** Given expenses of 0.29 against a cap of 1.00, When summary runs, Then `pct: 29` (integer math, not 28); given three expenses of 0.10 against a cap of 0.30, Then `state: "over"`, `left: 0`.
 - **AC13** Given any month with a budget set, When `GET /api/export?month=`, Then the CSV body is identical to the body with no budget set (D6).
 - **AC14** Given a budgets file containing `{not json`, When `GET /api/summary?month=2026-10`, Then `500 {"error":"internal error"}` (R15).
-- **AC15** Given the MCP server started with `EXPENSES_FILE` and `BUDGETS_FILE` temp paths holding a budget, When `monthly_summary` is called, Then its JSON equals the `GET /api/summary` body including `budget` (R14).
+- **AC15** Given the MCP server started with `EXPENSES_FILE` and `BUDGETS_FILE` temp paths holding a budget, When `monthly_summary` is called, Then its JSON deep-equals `summaryWithBudget()` over the same temp files, including `budget` (R14).
 
 ## Scope
 
