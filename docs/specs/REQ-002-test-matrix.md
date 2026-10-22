@@ -5,8 +5,9 @@ Linh asked to see covered. Levels: **unit** = `node:test` on `src/budget.js` / `
 `src/expenses.js` (`tests/budget.test.js`, `tests/demo-seed.test.js`), **API** = `node:test` against
 `createServer()` with temp `EXPENSES_FILE` + `BUDGETS_FILE` (`tests/api.test.js`), **MCP** =
 `tests/mcp.test.js`, **hook** = `tests/guard-hook.test.js`, **e2e** = Playwright `e2e/budget.spec.js`
-on port 3100 with temp files, **review** = checked by the reviewer, not automated. Status column is
-filled in by the implementing PR.
+on port 3100 with temp files, **review** = checked by the reviewer, not automated. Every row with an
+automated level is a test the implementing ticket must write. Status column is filled in by the
+implementing PR.
 
 ## REQ-002a — storage, isolation, effective budget
 
@@ -21,18 +22,20 @@ filled in by the implementing PR.
 | a-AC7 | Keys not matching `MONTH_RE` ignored when resolving | unit | |
 | a-AC8 | `validateBudget` returns cents, accepts numeric strings | unit | |
 | a-AC9 | `total` missing / 0 / negative / NaN / text → `total must be a positive number` | unit | |
-| a-AC10 | Cap key `coffee` → category message | unit | |
+| a-AC10 | Cap key `coffee` → `coffee: category must be one of …` (R38) | unit | |
 | a-AC11 | Cap key ` Food ` normalised to `food` | unit | |
 | a-AC12 | Cap 0 / negative / text → `<cat> cap must be a positive number` | unit | |
 | a-AC13 | `categories` null / array / string → `categories must be an object`; omitted → `{}` | unit | |
 | a-AC14 | Input null / array / number → `body must be an object` | unit | |
-| a-AC15 | Error precedence: total before categories; keys in insertion order | unit | |
+| a-AC15 | Error precedence: total before categories; keys in insertion order, message names the key | unit | |
 | a-AC16 | `loadBudgets()` throws on unparsable JSON | unit | |
 | a-AC17 | `resetFromSeed()` and `resetFromSeed({ demo: true })` reset both temp files | unit | |
 | a-AC18 | Every suite sets `BUDGETS_FILE` to a temp path (api, store, mcp env, playwright env) | review | |
 | a-AC19 | `.gitignore` lists `data/budgets.json` | review | |
 | a-AC20 | Hook blocks Bash / Write / Edit on `data/budgets.json`; `npm run seed`, `seed:demo` allowed | hook | |
 | a-AC21 | `monthCents()` exported; `summary()` output unchanged | unit (existing summary tests) | |
+| a-AC22 | Rounded cents value 0 (`0.004`) → rejected | unit | |
+| a-AC23 | Duplicate keys after normalising → `food: duplicate category` | unit | |
 
 ## REQ-002b — budget API
 
@@ -47,7 +50,7 @@ filled in by the implementing PR.
 | b-AC7 | PUT on an inherited month writes only that month | API | |
 | b-AC8 | PUT `{not json` → 400 `invalid JSON body` | API | |
 | b-AC9 | PUT `null` / `[]` / `5` → 400 `body must be an object`, nothing written | API | |
-| b-AC10 | PUT no total / total ≤ 0 / cap ≤ 0 / `categories: []` / cap `coffee` → 400, nothing written | API | |
+| b-AC10 | PUT no total / total ≤ 0 / `0.004` / cap ≤ 0 / `categories: []` / cap `coffee` (keyed message) / duplicate keys → 400, nothing written | API | |
 | b-AC11 | POST/DELETE `/api/budget` → 405 | API | |
 | b-AC12 | Unparsable budgets file → 500, server keeps serving | API | |
 | b-AC13 | README “HTTP API” table lists every route | review | |
@@ -79,11 +82,11 @@ filled in by the implementing PR.
 | d-AC1 | Picking `2026-10` pre-fills saved values, source note hidden | e2e | |
 | d-AC2 | **Copied from previous month**: fields pre-filled, note exactly `copied from 2026-10, not saved` | e2e | |
 | d-AC3 | **No budget set** (`2026-01`): fields empty, note hidden | e2e | |
-| d-AC4 | Save sends numeric PUT body, empty caps omitted, `budget-saved` shows `Saved for 2026-11.` | e2e | |
-| d-AC5 | Saving an inherited month leaves the source month unchanged; `budget-saved` hidden on month change | e2e | |
+| d-AC4 | Save on `2027-01` sends numeric PUT body, empty caps omitted, `budget-saved` shows `Saved for 2027-01.` | e2e | |
+| d-AC5 | Saving `2026-11` leaves `2026-10` unchanged; `budget-saved` and `budget-error` hidden on month change | e2e | |
 | d-AC6 | Empty / 0 total blocked by native validation, no request | e2e | |
-| d-AC7 | Routed 400 shown in `budget-error`, inputs keep values, `budget-saved` hidden | e2e | |
-| d-AC8 | Clearing a cap and saving omits it from the body and removes it | e2e | |
+| d-AC7 | Routed 400 (keyed category message) shown in `budget-error`, inputs keep values; hidden again on save start and month change | e2e | |
+| d-AC8 | Clearing `fun` and saving omits it from the body; field empty after reload; `GET /api/budget` has no `fun` | e2e | |
 | d-AC9 | `budget-form` bounding box ≤ 390 px at phone width | e2e (viewport 390 px) | |
 
 ## REQ-002e — status display
@@ -114,8 +117,9 @@ filled in by the implementing PR.
 | f-AC8 | Lines use the **expense's month** (Nov expense while picker on Oct; Nov inherits Oct) | e2e | |
 | f-AC9 | Next add replaces the lines, never stacks | e2e | |
 | f-AC10 | Failed add leaves the list unchanged | e2e | |
-| f-AC11 | Aborted status fetch → hidden, no `form-error`, no `pageerror` | e2e | |
+| f-AC11 | Expense in a month ≠ picker, separate fetch aborted → hidden, no `form-error`, no `pageerror`, picker summary refreshed | e2e | |
 | f-AC12 | Expense saved and listed even when it pushes a line to `over` | e2e | |
+| f-AC13 | Expense month = picker month → exactly one summary request (R41) | e2e | |
 
 ## REQ-002g — demo data
 
@@ -140,6 +144,7 @@ filled in by the implementing PR.
 | No budget set | a-AC5, a-AC6, b-AC3, c-AC11, d-AC3, e-AC7, f-AC7, g-AC5 |
 | Copied from previous month | a-AC4, b-AC2, b-AC7, c-AC10, d-AC2, d-AC5, f-AC8 |
 | Category outside the four | a-AC10, b-AC10, c-AC8, e-AC6, f-AC4, g-AC4 |
+| Validation defaults (cents ≤ 0, duplicate keys) | a-AC22, a-AC23, b-AC10 |
 | Past month (before first saved budget) | a-AC5, b-AC3, c-AC11, g-AC5 |
 | Integer cents / float traps | a-AC8, c-AC12 |
 | Isolation from `data/budgets.json` | a-AC18, a-AC19, a-AC20, b-AC12, g-AC8 |

@@ -25,8 +25,8 @@ Tests copy `data/demo-seed.json` / `data/demo-budgets.json` to temp paths and re
 
 ## Scope
 
-- `data/demo-seed.json`: `data/seed.json` rows + October 2026 rows (ids `o1…`) summing exactly to AC2.
-- `data/demo-budgets.json`: `{ "2026-10": { "total": 150000, "categories": { "food": 50000, "fun": 15000 } } }` (cents, R1).
+- `data/demo-seed.json` (overwrites the REQ-002a placeholder, R37): `data/seed.json` rows + October 2026 rows (ids `o1…`) summing exactly to AC2.
+- `data/demo-budgets.json` (overwrites the placeholder): `{ "2026-10": { "total": 150000, "categories": { "food": 50000, "fun": 15000 } } }` (cents, R1).
 - `tests/demo-seed.test.js`: AC2–AC7 over temp copies.
 - README: `seed:demo` line and the demo month.
 

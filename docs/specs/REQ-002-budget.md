@@ -43,8 +43,9 @@ Shared rules:
   Conversion happens once on the way in (`validateBudget`) and once on the way out (`toWire`).
 - Thresholds: `spentCents * 100 >= budgetCents * 80` → `warn`, `spentCents >= budgetCents` → `over`.
 - `pct = Math.floor(spentCents * 100 / budgetCents)` (integer math, R10). No upper bound.
-- Budget amounts are validated like `amount` in `validate()`: finite, > 0, rounded to cents.
-  A cap larger than the overall total is allowed (no rule asked for).
+- Budget amounts are validated like `amount` in `validate()`: finite, rounded to cents, and the
+  **rounded cents value must be > 0** (`0.004` → 0 cents → rejected). A cap larger than the overall
+  total is allowed (no rule asked for).
 - A category cap and the overall are independent lines; each has its own state.
 
 ## Data shape
@@ -68,7 +69,8 @@ are stored; inheritance (D3a) is computed, never written.
   Playwright web server and the MCP test pass a temp path (R2, R3); the guard hook blocks
   `data/budgets.json` the same way it blocks `data/expenses.json` (R4); the file is git-ignored (R3).
 - Seeds: `data/seed-budgets.json` (committed, `{}`) for tests and `npm run seed`;
-  `data/demo-budgets.json` for `npm run seed:demo` (R33).
+  `data/demo-seed.json` + `data/demo-budgets.json` for `npm run seed:demo` (R33). Ticket a commits
+  placeholders (copy of `seed.json`, `{}`); ticket g overwrites them (R37).
 
 Effective budget for month `M`:
 
@@ -97,8 +99,9 @@ Body `{ "total": 1500, "categories": { "food": 500 } }`. Full replace of that mo
 `200` with the same shape as GET (`source` = the month). `400` on: invalid JSON
 (`invalid JSON body`, existing text), body not a plain object (`body must be an object`), missing
 or non-positive `total`, `categories` not a plain object, cap key outside the four after
-trim + lowercase (D8, R7), non-positive cap. Unknown top-level keys are ignored. Error precedence
-in R8. No DELETE (edit the numbers instead; removal is out of scope).
+trim + lowercase (D8, R7; message `coffee: category must be one of food, transport, bills, fun`,
+R38), two keys that normalise to the same category (`food: duplicate category`), non-positive cap.
+Unknown top-level keys are ignored. Error precedence in R8. No DELETE (edit the numbers instead; removal is out of scope).
 
 ### `GET /api/summary?month=YYYY-MM` (extended)
 
@@ -158,6 +161,7 @@ Export CSV
 - `data-state="ok|warn|over"` sits on the `summary-total` `<strong>` and on each capped
   `summary-category` `<li>` (R23). CSS colours only `warn` (`#8a5a00`) and `over` (`#b00020`,
   the existing `.error` red); `ok` has no rule (R25). Text carries the information too.
+- `budget-error` and `budget-saved` are hidden on month change and when a save starts.
 - Test ids: `budget-form`, `budget-total`, `budget-cap-<category>`, `budget-save`, `budget-source`,
   `budget-saved`, `budget-error`, `summary-total` (existing, gains `data-state`),
   `summary-category` (existing, gains `data-state` when capped).
@@ -173,7 +177,9 @@ Add form, after a successful add (D4, R27, R28):
 - `budget-notice` is a `<ul hidden>`; each line is an `<li data-testid="budget-notice-line">` with
   its own `data-line` and `data-state`. Category line first, total line second. The list is hidden
   when it has no lines.
-- Computed for the **expense's month** (from its date), not the summary picker month.
+- Computed for the **expense's month** (from its date), not the summary picker month. When that
+  month equals the picker month the lines come from the `loadSummary()` response already fetched
+  (one request); only a different month triggers a separate `GET /api/summary` (R41).
 - Hidden when the month has no budget, when every line is `ok`, and when the status fetch fails
   (R29). Replaced on the next successful add; untouched by a failed add. No timer, no popup.
 - Category line only when that category has a cap. Percent is written `88%` (no space, R26).
@@ -213,7 +219,7 @@ no test, e2e run or hook may touch `data/budgets.json`; money is integer cents e
 | R6 | a-6 | `effectiveBudget` ignores keys that do not match `MONTH_RE`; valid keys compare as strings. |
 | R7 | a-7 | Cap keys are trimmed and lowercased, then must be one of the four. `categories` present but not a plain object → `categories must be an object`. Body not a plain object → `body must be an object`. |
 | R8 | a-8 | Validation order: body type → `total` → `categories` type → keys in insertion order, per key name then value. `{ coffee: 0 }` → category message; `{ coffee: 10, food: 0 }` → category message for `coffee`. |
-| R9 | a-9 | `resetFromSeed` byte-copies both seeds (`copyFileSync`); AC12 checks deep equality via `loadBudgets()`. Pattern reference fixed to `tests/store.test.js`. |
+| R9 | a-9 | `resetFromSeed` byte-copies both seeds (`copyFileSync`); a-AC17 checks deep equality via `loadBudgets()`. Pattern reference fixed to `tests/store.test.js`. |
 | R10 | c-1 | `pct = Math.floor(spentCents * 100 / budgetCents)`. No bound; a tiny budget may yield a huge `pct`, displayed as is. |
 | R11 | c-2 | `budget.categories` ordered by the fixed four (food, transport, bills, fun), capped only. UI appends unspent capped categories after the `byCategory` lines in that order. |
 | R12 | b-3 | `GET /api/budget` is 200 for every valid month (budget may be `null`), 400 only for a bad month. Spec wording fixed. |
@@ -236,8 +242,18 @@ no test, e2e run or hook may touch `data/budgets.json`; money is integer cents e
 | R29 | f-4 | A failed status fetch after a successful add hides the notice silently: no `form-error`, no `pageerror`. |
 | R30 | d-6 | d's e2e fixtures come from a `PUT` in `beforeEach` (R21), never from a seed. `data/seed-budgets.json` stays `{}`. |
 | R31 | d-7 | d-AC9 asserts on `budget-form` only: its bounding-box width ≤ viewport width at 390 px. |
-| R32 | e-4 | e-AC10 reworded: existing assertions pass because the months they use (≤ `2026-04`) have no effective budget. |
+| R32 | e-4 | e-AC9 reworded: existing assertions pass because the months they use (≤ `2026-04`) have no effective budget. |
 | R33 | g-1, g-2, g-3 | Linh: demo in `data/demo-seed.json` + `data/demo-budgets.json`, loaded by `npm run seed:demo` (`store.resetFromSeed({ demo: true })`). `data/seed.json` and every existing test untouched. Demo figures = spec example (food 90 %, overall 88 %). |
 | R34 | g-4 | g-AC6 measurable: ≥ 12 October rows on ≥ 8 distinct days, checked by a unit test over the demo file. “Realistic” dropped. |
 | R35 | a-5, c-4 follow-up | Demo files are verified by tests that copy them to temp paths; `npm run seed:demo` itself is never run by tests. |
 | R36 | f-2 follow-up | A capped category that is `ok` while the total is `warn` shows only the total line; `data-line` values are the category slug or `total`. |
+| R37 | a-1 (round 2) | Ticket a commits placeholder `data/demo-seed.json` (copy of `seed.json`) and `data/demo-budgets.json` (`{}`); ticket g overwrites them with the demo data. |
+| R38 | a-2 (round 2) | Unknown-category message includes the key: `coffee: category must be one of food, transport, bills, fun`. Applied to a-AC10, a-AC15, b-AC10 and d-AC7. |
+| R39 | d-1 (round 2) | d-AC4 saves `2027-01`, a month no other test reads; d-AC5 is self-contained. |
+| R40 | d-2 (round 2) | d-AC8 asserts `budget-cap-fun` is empty after reload and `GET /api/budget?month=2026-10` has no `fun` cap. |
+| R41 | f-1 (round 2) | Post-add lines reuse the `loadSummary()` response when the expense month equals the picker month; a separate fetch only otherwise. f-AC11 dates the expense in a different month and aborts that separate fetch. |
+
+Defaults applied without a number: a budget whose rounded cents value is ≤ 0 is rejected; two cap
+keys that normalise to the same category are a 400 (`food: duplicate category`); every test the
+matrix lists is written by the implementing ticket; `budget-error` is hidden on month change and
+when a save starts.
