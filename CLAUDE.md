@@ -28,7 +28,7 @@ Request flow: `public/app.js` (fetch) → `src/server.js` (routing, query/body v
 
 ## Never
 - Never read or write `data/expenses.json` from tests or scripts; always point `EXPENSES_FILE` at a temp file.
-- Never merge a PR without a review pass using `.claude/skills/review-checklist`.
+- Before merge, run `/review-checklist` and post its result on the PR; the human merges.
 - Never force-push `main`; on your own PR branch use `--force-with-lease` only.
-- Never add filesystem, network, or `store.js` calls inside `src/expenses.js`; it stays pure.
+- Keep `src/expenses.js` pure: file I/O goes in `src/store.js`, HTTP in `src/server.js`.
 - Never commit secrets, `.env` files, or AI-attribution lines; keep commit messages in conventional format.
