@@ -11,6 +11,13 @@
           { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-never-rules.js\"" }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-run-tests.js\"", "timeout": 300 }
+        ]
+      }
     ]
   }
 }
