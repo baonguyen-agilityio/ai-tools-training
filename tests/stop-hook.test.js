@@ -94,6 +94,18 @@ test('stop hook: branch diff is skipped on main or without origin/main', () => {
   allowed(run({ cwd: noRemote, stop_hook_active: false }));
 });
 
+test('stop hook: no merge base with origin/main still counts the working tree', () => {
+  const dir = repo(false);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+  git(dir, 'checkout', '-q', '--orphan', 'feat/x');
+  git(dir, 'commit', '-q', '-m', 'orphan');
+  write(dir, 'src/a.js');
+  const res = run({ cwd: dir, stop_hook_active: false });
+  assert.equal(res.status, 2);
+  assert.match(res.stderr, /STOP-MARKER/);
+  assert.match(res.stderr, /only retry/);
+});
+
 test('stop hook: outside a git repo exits 0', () => {
   const dir = mkdtempSync(join(tmpdir(), 'stop-hook-nogit-'));
   dirs.push(dir);

@@ -23,7 +23,11 @@ function branchPaths(cwd) {
   try { branch = git(['symbolic-ref', '--short', 'HEAD'], cwd).trim(); } catch { /* detached HEAD */ }
   if (branch === 'main') return [];
   try { git(['rev-parse', '--verify', '-q', 'origin/main'], cwd); } catch { return []; }
-  return git(['diff', '--name-only', 'origin/main...HEAD'], cwd).split('\n').filter(Boolean);
+  try {
+    return git(['diff', '--name-only', 'origin/main...HEAD'], cwd).split('\n').filter(Boolean);
+  } catch {
+    return []; // no merge base with origin/main: fall back to the working tree alone
+  }
 }
 
 // Returns the failure report, or null when there is nothing to report.
@@ -52,7 +56,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     process.exit(0); // malformed payload: fail open rather than trap every turn
   }
   if (report) {
-    process.stderr.write(`Stop hook (.claude/hooks/stop-run-tests.js): npm test failed, fix before finishing.\n${report}\n`);
+    process.stderr.write(`Stop hook (.claude/hooks/stop-run-tests.js): npm test failed, fix before finishing. This is the only retry: the next stop is allowed even if tests still fail, so fix them now.\n${report}\n`);
     process.exit(2);
   }
 }
