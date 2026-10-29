@@ -49,6 +49,22 @@ test('guard: blocks writes to data/expenses.json', () => {
   blocked(bash('bash <<\'EOF\'\necho [] > data/expenses.json\nEOF'), /data\/expenses\.json/);
 });
 
+test('guard: AC20 blocks Bash/Write/Edit on data/budgets.json; seed and seed:demo allowed', () => {
+  for (const cmd of [
+    'echo {} > data/budgets.json',
+    'cp data/seed-budgets.json data/budgets.json',
+    'sed -i "" s/a/b/ data/budgets.json',
+    'BUDGETS_FILE=data/budgets.json npm test',
+    'bash -c "rm data/budgets.json"',
+  ]) blocked(bash(cmd), /data\/budgets\.json/);
+  blocked(run('Write', { file_path: '/repo/data/budgets.json', content: '{}' }), /BUDGETS_FILE/);
+  blocked(run('Edit', { file_path: 'data/Budgets.json', old_string: 'a', new_string: 'b' }), /BUDGETS_FILE/);
+  allowed(bash('cat data/budgets.json'));
+  allowed(bash('npm run seed'));
+  allowed(bash('npm run seed:demo'));
+  allowed(run('Write', { file_path: '/repo/data/seed-budgets.json', content: '{}' }));
+});
+
 test('guard: heredoc bodies are data unless fed to a shell', () => {
   allowed(bash('cat > /tmp/body.md <<\'EOF\'\n- `cp x data/expenses.json` is blocked\n- git push -f origin main\nEOF'));
   allowed(bash('gh pr create --body "$(cat <<-EOF\n\tgit commit --no-verify\n\tEOF\n)"'));

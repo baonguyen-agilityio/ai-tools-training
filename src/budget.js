@@ -1,0 +1,71 @@
+// @ts-check
+// Budget domain logic. Pure functions, no I/O. Money is integer cents except on the wire.
+import { MONTH_RE } from './expenses.js';
+
+/**
+ * @typedef {object} Budget
+ * @property {number} total                       integer cents, > 0
+ * @property {Record<string, number>} categories  cap per category, integer cents, > 0
+ */
+
+/** Categories that may carry a cap, in display order. */
+export const BUDGET_CATEGORIES = ['food', 'transport', 'bills', 'fun'];
+
+const isPlainObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+/** Currency input → integer cents, or null when not a positive amount after rounding. */
+const toCents = (v) => {
+  const cents = Math.round(Number(v) * 100);
+  return Number.isFinite(cents) && cents > 0 ? cents : null;
+};
+
+/**
+ * Validate a wire budget and convert it to cents. Checks run in a fixed order so the
+ * first error is predictable: body → total → categories type → each key in insertion order.
+ * @param {unknown} input
+ * @returns {Budget}
+ * @throws {Error} on invalid input
+ */
+export function validateBudget(input) {
+  if (!isPlainObject(input)) throw new Error('body must be an object');
+  const total = toCents(input.total);
+  if (total === null) throw new Error('total must be a positive number');
+  const raw = input.categories === undefined ? {} : input.categories;
+  if (!isPlainObject(raw)) throw new Error('categories must be an object');
+  /** @type {Record<string, number>} */
+  const categories = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const cat = key.trim().toLowerCase();
+    if (!BUDGET_CATEGORIES.includes(cat)) {
+      throw new Error(`${cat}: category must be one of ${BUDGET_CATEGORIES.join(', ')}`);
+    }
+    if (cat in categories) throw new Error(`${cat}: duplicate category`);
+    const cents = toCents(value);
+    if (cents === null) throw new Error(`${cat} cap must be a positive number`);
+    categories[cat] = cents;
+  }
+  return { total, categories };
+}
+
+/**
+ * The month's own budget, else the nearest earlier saved month's, else none.
+ * Keys that are not YYYY-MM are ignored; valid keys compare as strings.
+ * @param {Record<string, Budget>} budgets
+ * @param {string} month  YYYY-MM
+ * @returns {{ source: string | null, budget: Budget | null }}
+ */
+export function effectiveBudget(budgets, month) {
+  let source = null;
+  for (const key of Object.keys(budgets)) {
+    if (MONTH_RE.test(key) && key <= month && (source === null || key > source)) source = key;
+  }
+  return { source, budget: source === null ? null : budgets[source] };
+}
+
+/**
+ * Cents → currency numbers for API responses.
+ * @param {Budget} b
+ */
+export function toWire(b) {
+  const categories = Object.fromEntries(Object.entries(b.categories).map(([k, v]) => [k, v / 100]));
+  return { total: b.total / 100, categories };
+}

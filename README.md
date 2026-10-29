@@ -19,7 +19,7 @@ Install and run:
 ```bash
 npm install                      # only dev dep: @playwright/test
 npx playwright install chromium  # browser for e2e, once
-npm run seed                     # resets data/expenses.json from data/seed.json
+npm run seed                     # resets data/expenses.json + data/budgets.json from the seeds
 npm start                        # http://localhost:3000
 ```
 
@@ -37,7 +37,7 @@ All of the above must be green on a fresh clone. If not, fix your environment fi
 ```
 src/        server, store, domain logic
 public/     static web page calling the API
-data/       seed.json (committed), expenses.json (generated, ignored)
+data/       seed.json, seed-budgets.json, demo-*.json (committed); expenses.json, budgets.json (generated, ignored)
 tests/      node:test suites
 e2e/        Playwright specs
 docs/       backlog tickets and project docs
@@ -45,7 +45,7 @@ docs/       backlog tickets and project docs
 
 ## Workflow
 
-- `data/expenses.json` is local state. Reset with `npm run seed`.
+- `data/expenses.json` and `data/budgets.json` are local state. Reset with `npm run seed`; tests point `EXPENSES_FILE` / `BUDGETS_FILE` at temp files.
 - Bug tickets live in `docs/backlog/`. Treat them as reports from a user, not as hints.
 - CI runs `npm test` and `npm run test:e2e` on every push.
 

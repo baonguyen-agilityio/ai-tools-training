@@ -1,0 +1,14 @@
+[
+  { "id": "a1", "date": "2026-01-03", "amount": 12.5,  "category": "food",      "note": "Lunch" },
+  { "id": "a2", "date": "2026-01-10", "amount": 45,    "category": "transport", "note": "Grab to office" },
+  { "id": "a3", "date": "2026-01-15", "amount": 8.75,  "category": "food",      "note": "Coffee" },
+  { "id": "a4", "date": "2026-01-28", "amount": 120,   "category": "bills",     "note": "Electricity" },
+  { "id": "a5", "date": "2026-02-01", "amount": 30.1,  "category": "food",      "note": "Groceries" },
+  { "id": "a6", "date": "2026-02-05", "amount": 15.2,  "category": "transport", "note": "Bus pass" },
+  { "id": "a7", "date": "2026-02-14", "amount": 60,    "category": "fun",       "note": "Cinema" },
+  { "id": "a8", "date": "2026-02-20", "amount": 9.99,  "category": "food",      "note": "Snacks" },
+  { "id": "a9", "date": "2026-02-28", "amount": 200,   "category": "bills",     "note": "Internet" },
+  { "id": "b1", "date": "2026-03-02", "amount": 22.3,  "category": "food",      "note": "Dinner" },
+  { "id": "b2", "date": "2026-03-09", "amount": 18,    "category": "transport", "note": "Taxi" },
+  { "id": "b3", "date": "2026-03-15", "amount": 75,    "category": "fun",       "note": "Concert" }
+]
