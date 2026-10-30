@@ -327,3 +327,50 @@ test('b-AC13 README HTTP API table lists exactly the seven routes', () => {
     ['PUT', '/api/budget'],
   ]);
 });
+
+// REQ-002c: budget status in /api/summary. beforeEach reseeds both files, so saved budgets never leak.
+const OCT = { total: 150000, categories: { food: 50000, fun: 15000 } };
+
+test('c-AC1: GET /api/summary adds budget.total; total and byCategory unchanged', async () => {
+  store.saveBudgets({ '2026-10': OCT });
+  for (const [amount, category] of [[1000, 'bills'], [320.5, 'food']]) {
+    assert.equal((await post({ date: '2026-10-05', amount, category })).status, 201);
+  }
+  const body = await (await api('/api/summary?month=2026-10')).json();
+  assert.equal(body.total, 1320.5);
+  assert.deepEqual(body.byCategory, { bills: 1000, food: 320.5 });
+  assert.deepEqual(body.budget.total, { budget: 1500, spent: 1320.5, left: 179.5, pct: 88, state: 'warn' });
+});
+
+test('c-AC10: unsaved month inherits the previous budget with its own expenses', async () => {
+  store.saveBudgets({ '2026-10': OCT });
+  await post({ date: '2026-10-05', amount: 999, category: 'food' });
+  await post({ date: '2026-11-05', amount: 100, category: 'food' });
+  const { budget } = await (await api('/api/summary?month=2026-11')).json();
+  assert.equal(budget.source, '2026-10');
+  assert.deepEqual(budget.total, { budget: 1500, spent: 100, left: 1400, pct: 6, state: 'ok' });
+  assert.deepEqual(budget.categories.food, { budget: 500, spent: 100, left: 400, pct: 20, state: 'ok' });
+});
+
+test('c-AC11: month before any saved budget → budget null, rest as today', async () => {
+  store.saveBudgets({ '2026-10': OCT });
+  assert.deepEqual(await (await api('/api/summary?month=2026-01')).json(), {
+    month: '2026-01',
+    total: 186.25,
+    byCategory: { food: 21.25, transport: 45, bills: 120 },
+    budget: null,
+  });
+});
+
+test('c-AC13: CSV export identical with and without a budget', async () => {
+  const before = await (await api('/api/export?month=2026-02')).text();
+  store.saveBudgets({ '2026-02': OCT });
+  assert.equal(await (await api('/api/export?month=2026-02')).text(), before);
+});
+
+test('c-AC14: unparsable budgets file → /api/summary 500', async () => {
+  writeFileSync(process.env.BUDGETS_FILE, '{not json');
+  const res = await api('/api/summary?month=2026-10');
+  assert.equal(res.status, 500);
+  assert.deepEqual(await res.json(), { error: 'internal error' });
+});

@@ -10,7 +10,8 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import * as store from '../src/store.js';
-import { list, summary, MONTH_RE } from '../src/expenses.js';
+import { list, MONTH_RE } from '../src/expenses.js';
+import { summaryWithBudget } from '../src/budget.js';
 
 const TOOLS = [
   {
@@ -44,7 +45,7 @@ const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value,
 function monthlySummary(args) {
   const month = String(args.month ?? '');
   if (!MONTH_RE.test(month)) throw new McpError(ErrorCode.InvalidParams, 'month must be YYYY-MM');
-  return json(summary(store.load(), month));
+  return json(summaryWithBudget(store.load(), store.loadBudgets(), month));
 }
 
 /** @param {Record<string, unknown>} args */
