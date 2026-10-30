@@ -54,14 +54,23 @@ async function loadSummary() {
   const month = summaryMonth.value;
   if (!month) return;
   $('#export-link').href = `/api/export?month=${month}`;
-  const { total, byCategory } = await api(`/api/summary?month=${month}`);
-  $('#summary-total').textContent = money(total);
+  const { total, byCategory, budget } = await api(`/api/summary?month=${month}`);
+  // Plain amount, or `spent / budget (Left: …)` with data-state when the line has a budget.
+  const render = (el, label, amount, line) => {
+    el.textContent = label + money(amount) + (line ? ` / ${money(line.budget)} ${statusText(line)}` : '');
+    if (line) el.dataset.state = line.state;
+    else delete el.dataset.state;
+  };
+  render($('#summary-total'), '', total, budget?.total);
+  const caps = budget?.categories ?? {};
+  // byCategory order first, then capped categories with no spend (API already orders caps).
+  const cats = [...Object.keys(byCategory), ...Object.keys(caps).filter((c) => !(c in byCategory))];
   $('#summary-categories').replaceChildren(
-    ...Object.entries(byCategory).map(([cat, amt]) => {
+    ...cats.map((cat) => {
       const li = document.createElement('li');
       li.dataset.testid = 'summary-category';
       li.dataset.category = cat;
-      li.textContent = `${cat}: ${money(amt)}`;
+      render(li, `${cat}: `, byCategory[cat] ?? 0, caps[cat]);
       return li;
     }),
   );
@@ -107,6 +116,9 @@ function highlight(text, q) {
 
 // Two decimals, same as the CSV export; non-numbers pass through untouched so they still render literally.
 const money = (n) => (typeof n === 'number' ? n.toFixed(2) : n);
+
+// `(Left: 50.00)` or `(Over by 35.50)` for one /api/summary budget line; shared with the post-add notice.
+const statusText = ({ left }) => (left >= 0 ? `(Left: ${money(left)})` : `(Over by ${money(-left)})`);
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
