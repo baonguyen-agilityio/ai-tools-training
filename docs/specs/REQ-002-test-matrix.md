@@ -93,15 +93,15 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| e-AC1 | Total line `1320.50 / 1500.00 (Left: 179.50)`, `data-state="warn"`, warn colour | e2e | |
-| e-AC2 | Category line `(Over by 35.50)`, `data-state="over"`, over colour | e2e | |
-| e-AC3 | **Exactly 100 %** → `(Left: 0.00)` with `data-state="over"` | e2e | |
-| e-AC4 | `ok` → `data-state="ok"`, body colour (no rule) | e2e | |
-| e-AC5 | Capped category with zero spend listed after `byCategory` lines | e2e | |
-| e-AC6 | **Category outside the four** rendered exactly as today, no `data-state` | e2e | |
-| e-AC7 | **No budget set** (`2026-01`) → total and category lines identical to today | e2e | |
-| e-AC8 | Lines refresh after add / delete without reload | e2e | |
-| e-AC9 | Existing `expense.spec.js` summary assertions pass unchanged (months ≤ 2026-04) | e2e (existing) | |
+| e-AC1 | Total line `1320.50 / 1500.00 (Left: 179.50)`, `data-state="warn"`, warn colour | e2e | done (REQ-002e) |
+| e-AC2 | Category line `(Over by 35.50)`, `data-state="over"`, over colour | e2e | done (REQ-002e) |
+| e-AC3 | **Exactly 100 %** → `(Left: 0.00)` with `data-state="over"` | e2e | done (REQ-002e) |
+| e-AC4 | `ok` → `data-state="ok"`, body colour (no rule) | e2e | done (REQ-002e) |
+| e-AC5 | Capped category with zero spend listed after `byCategory` lines | e2e | done (REQ-002e) |
+| e-AC6 | **Category outside the four** rendered exactly as today, no `data-state` | e2e | done (REQ-002e) |
+| e-AC7 | **No budget set** (`2026-01`) → total and category lines identical to today | e2e | done (REQ-002e) |
+| e-AC8 | Lines refresh after add / delete without reload | e2e | done (REQ-002e) |
+| e-AC9 | Existing `expense.spec.js` summary assertions pass unchanged (months ≤ 2026-04) | e2e (existing) | done (REQ-002e) |
 
 ## REQ-002f — post-add notice lines
 

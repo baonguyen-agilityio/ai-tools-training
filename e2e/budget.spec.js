@@ -218,3 +218,129 @@ test.describe('REQ-002d set budget', () => {
     expect(box.width).toBeLessThanOrEqual(390);
   });
 });
+
+test.describe('REQ-002e summary status', () => {
+  const NOTE = 'E2E budget';
+  const WARN = 'rgb(138, 90, 0)';
+  const OVER = 'rgb(176, 0, 32)';
+  const BODY = 'rgb(34, 34, 34)';
+
+  const line = (page, category) => page.locator(`[data-testid="summary-category"][data-category="${category}"]`);
+
+  async function addExpenses(page, list) {
+    for (const [category, amount] of list) {
+      const res = await page.request.post('/api/expenses', { data: { date: '2026-10-15', amount, category, note: NOTE } });
+      expect(res.ok()).toBe(true);
+    }
+  }
+
+  async function showOctober(page, list = []) {
+    await addExpenses(page, list);
+    await page.getByTestId('summary-month').fill('2026-10');
+  }
+
+  test.beforeEach(async ({ page }) => {
+    const res = await page.request.put('/api/budget?month=2026-10', { data: { total: 1500, categories: { food: 500, fun: 150 } } });
+    expect(res.ok()).toBe(true);
+    await page.goto('/');
+  });
+
+  test.afterEach(async ({ page }) => {
+    const { items } = await (await page.request.get(`/api/expenses?limit=100&q=${encodeURIComponent(NOTE)}`)).json();
+    for (const e of items.filter((e) => e.note === NOTE)) await page.request.delete(`/api/expenses/${e.id}`);
+  });
+
+  test('e-AC1 total line shows spent / budget, Left and warn colour', async ({ page }) => {
+    await showOctober(page, [['food', 450], ['transport', 120.5], ['bills', 620], ['fun', 100], ['coffee', 30]]);
+    const total = page.getByTestId('summary-total');
+    await expect(total).toHaveText('1320.50 / 1500.00 (Left: 179.50)');
+    await expect(total).toHaveAttribute('data-state', 'warn');
+    await expect(total).toHaveCSS('color', WARN);
+  });
+
+  test('e-AC2 over-cap category shows Over by and over colour', async ({ page }) => {
+    await showOctober(page, [['food', 535.5]]);
+    await expect(line(page, 'food')).toHaveText('food: 535.50 / 500.00 (Over by 35.50)');
+    await expect(line(page, 'food')).toHaveAttribute('data-state', 'over');
+    await expect(line(page, 'food')).toHaveCSS('color', OVER);
+    await expect(page.getByTestId('summary-total')).toHaveAttribute('data-state', 'ok');
+  });
+
+  test('e-AC3 exactly 100% is over with Left: 0.00', async ({ page }) => {
+    await showOctober(page, [['food', 500]]);
+    await expect(line(page, 'food')).toHaveText(/\(Left: 0\.00\)$/);
+    await expect(line(page, 'food')).toHaveAttribute('data-state', 'over');
+  });
+
+  test('e-AC4 ok line has data-state ok and body colour', async ({ page }) => {
+    await showOctober(page, [['fun', 100]]);
+    await expect(line(page, 'fun')).toHaveText('fun: 100.00 / 150.00 (Left: 50.00)');
+    await expect(line(page, 'fun')).toHaveAttribute('data-state', 'ok');
+    await expect(line(page, 'fun')).toHaveCSS('color', BODY);
+  });
+
+  test('e-AC5 unspent capped category listed after byCategory lines', async ({ page }) => {
+    await showOctober(page, [['food', 10], ['coffee', 5]]);
+    await expect(page.getByTestId('summary-category')).toHaveText([
+      'food: 10.00 / 500.00 (Left: 490.00)',
+      'coffee: 5.00',
+      'fun: 0.00 / 150.00 (Left: 150.00)',
+    ]);
+  });
+
+  test('e-AC6 uncapped category renders as today without data-state', async ({ page }) => {
+    await showOctober(page, [['coffee', 30]]);
+    await expect(line(page, 'coffee')).toHaveText('coffee: 30.00');
+    await expect(line(page, 'coffee')).not.toHaveAttribute('data-state');
+  });
+
+  test('e-AC7 month without budget renders as today', async ({ page }) => {
+    await page.getByTestId('summary-month').fill('2026-10');
+    await expect(page.getByTestId('summary-total')).toHaveAttribute('data-state');
+    await page.getByTestId('summary-month').fill('2026-01');
+    const total = page.getByTestId('summary-total');
+    await expect(total).toHaveText('186.25');
+    await expect(total).not.toHaveAttribute('data-state');
+    const lines = page.getByTestId('summary-category');
+    await expect(lines).toHaveCount(3);
+    for (const li of await lines.all()) {
+      await expect(li).toHaveText(/^[^:]+: \d+\.\d{2}$/);
+      await expect(li).not.toHaveAttribute('data-state');
+    }
+  });
+
+  test('a slow summary for an earlier month does not overwrite the newer month', async ({ page }) => {
+    await addExpenses(page, [['food', 450]]);
+    let release;
+    const held = new Promise((r) => { release = r; });
+    await page.route(/\/api\/summary\?month=2026-01$/, async (route) => { await held; await route.continue(); });
+
+    await page.getByTestId('summary-month').fill('2026-01');
+    await page.getByTestId('summary-month').fill('2026-10');
+    const total = page.getByTestId('summary-total');
+    await expect(total).toHaveText('450.00 / 1500.00 (Left: 1050.00)');
+
+    const stale = page.waitForResponse(/\/api\/summary\?month=2026-01$/);
+    release();
+    await (await stale).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handler run
+    await expect(total).toHaveText('450.00 / 1500.00 (Left: 1050.00)');
+    await expect(total).toHaveAttribute('data-state', 'ok');
+    await expect(line(page, 'food')).toHaveText('food: 450.00 / 500.00 (Left: 50.00)');
+  });
+
+  test('e-AC8 status lines refresh after add and delete', async ({ page }) => {
+    await showOctober(page);
+    await page.getByTestId('input-date').fill('2026-10-15');
+    await page.getByTestId('input-amount').fill('450');
+    await page.getByTestId('input-category').fill('food');
+    await page.getByTestId('input-note').fill(NOTE);
+    await page.getByTestId('submit').click();
+    await expect(page.getByTestId('summary-total')).toHaveText('450.00 / 1500.00 (Left: 1050.00)');
+    await expect(line(page, 'food')).toHaveText('food: 450.00 / 500.00 (Left: 50.00)');
+
+    await page.getByTestId('expense-row').filter({ hasText: NOTE }).getByTestId('delete-btn').click();
+    await expect(page.getByTestId('summary-total')).toHaveText('0.00 / 1500.00 (Left: 1500.00)');
+    await expect(line(page, 'food')).toHaveText('food: 0.00 / 500.00 (Left: 500.00)');
+  });
+});

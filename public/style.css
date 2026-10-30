@@ -14,3 +14,5 @@ th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e5e
 td.amount { text-align: right; font-variant-numeric: tabular-nums; }
 .pager { display: flex; gap: 1rem; align-items: center; margin-top: 0.75rem; }
 .error { color: #b00020; width: 100%; margin: 0; }
+[data-state="warn"] { color: #8a5a00; }
+[data-state="over"] { color: #b00020; }
