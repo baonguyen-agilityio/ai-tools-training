@@ -58,7 +58,7 @@ async function loadSummary() {
   const seq = ++summarySeq;
   // Empty picker: nothing to show, and the bumped seq drops any response still in flight.
   if (!month) {
-    $('#export-link').href = '#';
+    $('#export-link').removeAttribute('href'); // `href="#"` + `download` would save the page itself
     $('#summary-total').textContent = '';
     delete $('#summary-total').dataset.state;
     $('#summary-categories').replaceChildren();

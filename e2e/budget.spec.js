@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 
 // Month invariant (R21, R39): saving tests use months >= 2027-01 (AC8 re-saves the 2026-10 baseline,
 // restored by beforeEach), inherited reads and tests that never write (AC6, AC7) use 2026-11 / 2026-12,
-// "no budget" uses 2026-01.
+// "no budget" uses 2026-01. Exception: d-AC5c saves and reads inheritance on 2027-04..06, e-AC11 saves
+// 2027-07 / 2027-08; no other test uses 2027-04..08.
 const BASELINE = { total: 1500, categories: { food: 500, fun: 150 } };
 const BUDGET_URL = /\/api\/budget\?/;
 
@@ -389,7 +390,7 @@ test.describe('REQ-002e summary status', () => {
     }
     await expect(page.getByTestId('budget-source')).toBeHidden();
     await expect(page.getByTestId('budget-saved')).toBeHidden();
-    await expect(page.getByTestId('export-link')).toHaveAttribute('href', '#');
+    await expect(page.getByTestId('export-link')).not.toHaveAttribute('href');
   });
 
   test('e-AC10b responses answered after the month is cleared stay dropped', async ({ page }) => {

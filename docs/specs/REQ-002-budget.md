@@ -250,7 +250,7 @@ no test, e2e run or hook may touch `data/budgets.json`; money is integer cents e
 | R36 | f-2 follow-up | A capped category that is `ok` while the total is `warn` shows only the total line; `data-line` values are the category slug or `total`. |
 | R37 | a-1 (round 2) | Ticket a commits placeholder `data/demo-seed.json` (copy of `seed.json`) and `data/demo-budgets.json` (`{}`); ticket g overwrites them with the demo data. |
 | R38 | a-2 (round 2) | Unknown-category message includes the key: `coffee: category must be one of food, transport, bills, fun`. Applied to a-AC10, a-AC15, b-AC10 and d-AC7. |
-| R39 | d-1 (round 2) | d-AC4 saves `2027-01`, d-AC5 saves `2027-02`; d-AC5 is self-contained. Spec-file invariant: saving tests use months ≥ `2027-01`, inherited-state reads use `2026-11` / `2026-12` only. |
+| R39 | d-1 (round 2) | d-AC4 saves `2027-01`, d-AC5 saves `2027-02`; d-AC5 is self-contained. Spec-file invariant: saving tests use months ≥ `2027-01`, inherited-state reads use `2026-11` / `2026-12` only, except `2027-04`…`2027-08`, reserved for tests that save their own source month and read inheritance from it (d-AC5c: `2027-04`…`2027-06`; e-AC11: `2027-07`, `2027-08`). |
 | R40 | d-2 (round 2) | d-AC8 asserts `budget-cap-fun` is empty after reload and `GET /api/budget?month=2026-10` has no `fun` cap. |
 | R41 | f-1 (round 2) | Post-add lines reuse the `loadSummary()` response when the expense month equals the picker month; a separate fetch only otherwise. f-AC11 dates the expense in a different month and aborts that separate fetch. |
 | R42 | QA#2 | The notice describes the last add only; any delete hides it. |

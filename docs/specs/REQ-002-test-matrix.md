@@ -103,7 +103,7 @@ implementing PR.
 | e-AC7 | **No budget set** (`2026-01`) → total and category lines identical to today | e2e | done (REQ-002e) |
 | e-AC8 | Lines refresh after add / delete without reload | e2e | done (REQ-002e) |
 | e-AC9 | Existing `expense.spec.js` summary assertions pass unchanged (months ≤ 2026-04) | e2e (existing) | done (REQ-002e) |
-| e-AC10 | Empty month → total and category lines cleared, no `data-state`, budget form empty, `budget-source` / `budget-saved` hidden, export href `#` | e2e | done (QA#3) |
+| e-AC10 | Empty month → total and category lines cleared, no `data-state`, budget form empty, `budget-source` / `budget-saved` hidden, export link has no `href` | e2e | done (QA#3) |
 | e-AC10b | Summary and budget responses held for `2026-11`, picker cleared, then released → summary and budget form stay empty (`summarySeq` / `budgetSeq` bump) | e2e | done (QA#3) |
 | e-AC11 | Unspent caps only, saved in scrambled order → lines in fixed order food, transport, bills, fun (R11) | e2e | done (pin) |
 
