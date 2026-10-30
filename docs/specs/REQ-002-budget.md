@@ -181,7 +181,8 @@ Add form, after a successful add (D4, R27, R28):
   month equals the picker month the lines come from the `loadSummary()` response already fetched
   (one request); only a different month triggers a separate `GET /api/summary` (R41).
 - Hidden when the month has no budget, when every line is `ok`, and when the status fetch fails
-  (R29). Replaced on the next successful add; untouched by a failed add. No timer, no popup.
+  (R29). Replaced on the next successful add; untouched by a failed add; hidden by any delete (R42).
+  No timer, no popup.
 - Category line only when that category has a cap. Percent is written `88%` (no space, R26).
 
 ## Demo (R33)
@@ -252,6 +253,7 @@ no test, e2e run or hook may touch `data/budgets.json`; money is integer cents e
 | R39 | d-1 (round 2) | d-AC4 saves `2027-01`, d-AC5 saves `2027-02`; d-AC5 is self-contained. Spec-file invariant: saving tests use months ≥ `2027-01`, inherited-state reads use `2026-11` / `2026-12` only. |
 | R40 | d-2 (round 2) | d-AC8 asserts `budget-cap-fun` is empty after reload and `GET /api/budget?month=2026-10` has no `fun` cap. |
 | R41 | f-1 (round 2) | Post-add lines reuse the `loadSummary()` response when the expense month equals the picker month; a separate fetch only otherwise. f-AC11 dates the expense in a different month and aborts that separate fetch. |
+| R42 | QA#2 | The notice describes the last add only; any delete hides it. |
 
 Defaults applied without a number: a budget whose rounded cents value is ≤ 0 is rejected; two cap
 keys that normalise to the same category are a 400 (`food: duplicate category`); every test the
