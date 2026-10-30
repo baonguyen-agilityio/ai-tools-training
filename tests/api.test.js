@@ -296,7 +296,7 @@ test('b-AC11 /api/budget rejects other methods with 405', async () => {
   }
 });
 
-test('b-AC12 GET /api/budget returns 500 on an unreadable budgets file and keeps serving', async () => {
+test('b-AC12 GET and PUT /api/budget return 500 on an unreadable budgets file and keep serving', async () => {
   writeFileSync(process.env.BUDGETS_FILE, '{not json');
   const res = await api('/api/budget?month=2026-10');
   assert.equal(res.status, 500);
