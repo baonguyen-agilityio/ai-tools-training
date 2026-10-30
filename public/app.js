@@ -2,7 +2,7 @@
 const state = { page: 1, limit: 10, category: '', q: '' };
 let listSeq = 0; // bumped per loadList(); a response for an older request is dropped
 let budgetSeq = 0; // same guard for loadBudget()
-const CAPS = ['food', 'transport', 'bills', 'fun'];
+const CAPS = ['food', 'transport', 'bills', 'fun']; // mirrors BUDGET_CATEGORIES in src/budget.js (source of truth)
 
 const $ = (sel) => document.querySelector(sel);
 const rows = $('#expense-rows');
@@ -155,6 +155,7 @@ budgetForm.addEventListener('submit', async (ev) => {
     budgetError.hidden = false;
     return;
   }
+  if (summaryMonth.value !== month) return; // month changed mid-save: the form now shows another month
   budgetSaved.textContent = `Saved for ${month}.`;
   budgetSaved.hidden = false;
   await Promise.all([loadBudget(), loadSummary()]);

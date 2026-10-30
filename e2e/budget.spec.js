@@ -15,6 +15,18 @@ test.describe('REQ-002d set budget', () => {
 
   const field = (page, name) => page.getByTestId(name === 'total' ? 'budget-total' : `budget-cap-${name}`);
 
+  // Holds every PUT until the returned release() is called; other budget requests pass through.
+  async function holdPuts(page) {
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    await page.route(BUDGET_URL, async (route) => {
+      if (route.request().method() !== 'PUT') return route.fallback();
+      await gate;
+      return route.continue();
+    });
+    return release;
+  }
+
   async function expectBaseline(page) {
     await expect(field(page, 'total')).toHaveValue('1500.00');
     await expect(field(page, 'food')).toHaveValue('500.00');
@@ -61,6 +73,33 @@ test.describe('REQ-002d set budget', () => {
     await summary;
     await expect(page.getByTestId('budget-saved')).toHaveText('Saved for 2027-01.');
     await expect(page.getByTestId('budget-source')).toBeHidden();
+
+    const release = await holdPuts(page);
+    const second = page.waitForRequest((r) => r.method() === 'PUT' && BUDGET_URL.test(r.url()));
+    await page.getByTestId('budget-save').click();
+    await second;
+    await expect(page.getByTestId('budget-saved')).toBeHidden();
+    release();
+    await expect(page.getByTestId('budget-saved')).toHaveText('Saved for 2027-01.');
+  });
+
+  test('d-AC5 a save answered after a month change does not show budget-saved', async ({ page }) => {
+    await page.getByTestId('summary-month').fill('2027-03');
+    await expect(field(page, 'total')).not.toHaveValue('');
+    const release = await holdPuts(page);
+    const put = page.waitForRequest((r) => r.method() === 'PUT' && BUDGET_URL.test(r.url()));
+    await page.getByTestId('budget-save').click();
+    await put;
+
+    await page.getByTestId('summary-month').fill('2026-11');
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2026-10, not saved');
+    const answered = page.waitForResponse((r) => r.request().method() === 'PUT');
+    release();
+    await (await answered).finished();
+    // No event marks "handler ignored the response"; one macrotask lets its continuation run.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    await expect(page.getByTestId('budget-saved')).toBeHidden();
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2026-10, not saved');
   });
 
   test('d-AC5 saving one month leaves the source month untouched', async ({ page }) => {
@@ -79,8 +118,10 @@ test.describe('REQ-002d set budget', () => {
   });
 
   test('d-AC6 empty or zero total is blocked by the browser', async ({ page }) => {
-    const puts = [];
-    page.on('request', (r) => r.method() === 'PUT' && puts.push(r.url()));
+    await page.route('**/api/budget**', async (route) => {
+      expect(route.request().method(), 'no PUT may be sent while total is invalid').not.toBe('PUT');
+      return route.fallback();
+    });
     await page.getByTestId('summary-month').fill('2026-12');
     await expect(field(page, 'total')).toHaveValue('1500.00');
 
@@ -89,7 +130,6 @@ test.describe('REQ-002d set budget', () => {
       await page.getByTestId('budget-save').click();
       expect(await field(page, 'total').evaluate((el) => el.checkValidity())).toBe(false);
     }
-    expect(puts).toEqual([]);
     await expect(page.getByTestId('budget-saved')).toBeHidden();
   });
 
