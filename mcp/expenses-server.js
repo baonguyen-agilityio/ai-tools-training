@@ -41,17 +41,22 @@ const TOOLS = [
 /** @param {unknown} value */
 const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] });
 
-/** @param {Record<string, unknown>} args */
-function monthlySummary(args) {
-  const month = String(args.month ?? '');
-  if (!MONTH_RE.test(month)) throw new McpError(ErrorCode.InvalidParams, 'month must be YYYY-MM');
+/** @param {() => unknown} read */
+function toolResult(read) {
   try {
-    return json(summaryWithBudget(store.load(), store.loadBudgets(), month));
+    return json(read());
   } catch (err) {
     // Same contract as the HTTP 500: log the cause on stderr, never leak it to the caller.
     console.error(err);
     return { isError: true, content: [{ type: 'text', text: 'internal error' }] };
   }
+}
+
+/** @param {Record<string, unknown>} args */
+function monthlySummary(args) {
+  const month = String(args.month ?? '');
+  if (!MONTH_RE.test(month)) throw new McpError(ErrorCode.InvalidParams, 'month must be YYYY-MM');
+  return toolResult(() => summaryWithBudget(store.load(), store.loadBudgets(), month));
 }
 
 /** @param {Record<string, unknown>} args */
@@ -63,7 +68,7 @@ function searchExpenses(args) {
     throw new McpError(ErrorCode.InvalidParams, 'page must be a positive integer');
   }
   const category = args.category === undefined ? undefined : String(args.category);
-  return json(list(store.load(), { q, category, page }));
+  return toolResult(() => list(store.load(), { q, category, page }));
 }
 
 export const server = new Server({ name: 'expenses', version: '0.1.0' }, { capabilities: { tools: {} } });

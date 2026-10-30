@@ -75,3 +75,33 @@ test('c-AC15: unparsable BUDGETS_FILE → monthly_summary tool error; answers ag
   assert.ok(!res.isError);
   assert.equal(JSON.parse(res.content[0].text).total, 315.29);
 });
+
+test('unparsable EXPENSES_FILE → monthly_summary tool error; answers again once the file is reset', async () => {
+  const saved = readFileSync(file, 'utf8');
+  writeFileSync(file, '{not json');
+  try {
+    const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+    assert.equal(res.isError, true);
+    assert.equal(res.content[0].text, 'internal error');
+  } finally {
+    writeFileSync(file, saved);
+  }
+  const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+  assert.ok(!res.isError);
+  assert.equal(JSON.parse(res.content[0].text).total, 315.29);
+});
+
+test('unparsable EXPENSES_FILE → search_expenses tool error; answers again once the file is reset', async () => {
+  const saved = readFileSync(file, 'utf8');
+  writeFileSync(file, '{not json');
+  try {
+    const res = await client.callTool({ name: 'search_expenses', arguments: { q: 'coffee' } });
+    assert.equal(res.isError, true);
+    assert.equal(res.content[0].text, 'internal error');
+  } finally {
+    writeFileSync(file, saved);
+  }
+  const res = await client.callTool({ name: 'search_expenses', arguments: { q: 'coffee' } });
+  assert.ok(!res.isError);
+  assert.deepEqual(JSON.parse(res.content[0].text).items.map((e) => e.id), ['a3']);
+});
