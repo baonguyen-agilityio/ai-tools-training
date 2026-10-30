@@ -392,6 +392,30 @@ test.describe('REQ-002e summary status', () => {
     await expect(page.getByTestId('export-link')).toHaveAttribute('href', '#');
   });
 
+  test('e-AC10b responses answered after the month is cleared stay dropped', async ({ page }) => {
+    let release;
+    const held = new Promise((r) => { release = r; });
+    const MONTH_2026_11 = /\/api\/(summary|budget)\?month=2026-11$/;
+    await page.route(MONTH_2026_11, async (route) => { await held; await route.continue(); });
+
+    const summaryReq = page.waitForRequest(/\/api\/summary\?month=2026-11$/);
+    const budgetReq = page.waitForRequest(/\/api\/budget\?month=2026-11$/);
+    await page.getByTestId('summary-month').fill('2026-11');
+    const reqs = await Promise.all([summaryReq, budgetReq]);
+    await page.getByTestId('summary-month').fill('');
+    await expect(page.getByTestId('summary-total')).toHaveText('');
+
+    release();
+    for (const r of reqs) await (await r.response()).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handlers run
+    await expect(page.getByTestId('summary-total')).toHaveText('');
+    await expect(page.getByTestId('summary-category')).toHaveCount(0);
+    for (const id of ['budget-total', ...['food', 'transport', 'bills', 'fun'].map((c) => `budget-cap-${c}`)]) {
+      await expect(page.getByTestId(id)).toHaveValue('');
+    }
+    await expect(page.getByTestId('budget-source')).toBeHidden();
+  });
+
   test('e-AC11 unspent capped categories follow the fixed order (R11)', async ({ page }) => {
     // Caps PUT in scrambled insertion order; months with no expenses.
     const put = (month, categories) => page.request.put(`/api/budget?month=${month}`, { data: { total: 1000, categories } });
@@ -567,6 +591,33 @@ test.describe('REQ-002f post-add notice', () => {
     await expectLines(page, [['food', 'over', 'food: over budget (Over by 35.50)']]);
     await page.getByTestId('expense-row').filter({ hasText: NOTE }).filter({ hasText: 'fun' }).getByTestId('delete-btn').click();
     await expect(page.getByTestId('expense-row').filter({ hasText: NOTE })).toHaveCount(1);
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+  });
+
+  test('f-AC14b a delete while an add is pending keeps the notice hidden (R42)', async ({ page }) => {
+    await addViaApi(page, [['fun', 10]]);
+    let release;
+    const held = new Promise((r) => { release = r; });
+    let first = true;
+    await page.route(/\/api\/summary\?month=2026-10$/, async (route) => {
+      if (!first) return route.fallback();
+      first = false;
+      await held;
+      return route.continue();
+    });
+
+    const addSummary = page.waitForRequest(/\/api\/summary\?month=2026-10$/);
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    const req = await addSummary;
+    const funRow = page.getByTestId('expense-row').filter({ hasText: NOTE }).filter({ hasText: 'fun' });
+    const deleted = page.waitForResponse((r) => r.request().method() === 'DELETE');
+    await funRow.getByTestId('delete-btn').click();
+    await deleted;
+
+    release();
+    await (await req.response()).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handler run
     await expect(notice(page)).toBeHidden();
     await expect(lines(page)).toHaveCount(0);
   });
