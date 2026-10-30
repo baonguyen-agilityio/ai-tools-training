@@ -1,6 +1,7 @@
 // Minimal client: fetch from the API, render, re-fetch after every mutation.
 const state = { page: 1, limit: 10, category: '', q: '' };
 let listSeq = 0; // bumped per loadList(); a response for an older request is dropped
+let summarySeq = 0; // same for loadSummary(), so an older month can't overwrite a newer one
 let budgetSeq = 0; // same guard for loadBudget()
 const CAPS = ['food', 'transport', 'bills', 'fun']; // mirrors BUDGET_CATEGORIES in src/budget.js (source of truth)
 
@@ -54,7 +55,9 @@ async function loadSummary() {
   const month = summaryMonth.value;
   if (!month) return;
   $('#export-link').href = `/api/export?month=${month}`;
+  const seq = ++summarySeq;
   const { total, byCategory, budget } = await api(`/api/summary?month=${month}`);
+  if (seq !== summarySeq) return;
   // Plain amount, or `spent / budget (Left: …)` with data-state when the line has a budget.
   const render = (el, label, amount, line) => {
     el.textContent = label + money(amount) + (line ? ` / ${money(line.budget)} ${statusText(line)}` : '');

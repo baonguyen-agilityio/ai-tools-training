@@ -263,6 +263,7 @@ test.describe('REQ-002e summary status', () => {
     await expect(line(page, 'food')).toHaveText('food: 535.50 / 500.00 (Over by 35.50)');
     await expect(line(page, 'food')).toHaveAttribute('data-state', 'over');
     await expect(line(page, 'food')).toHaveCSS('color', OVER);
+    await expect(page.getByTestId('summary-total')).toHaveAttribute('data-state', 'ok');
   });
 
   test('e-AC3 exactly 100% is over with Left: 0.00', async ({ page }) => {
@@ -306,6 +307,26 @@ test.describe('REQ-002e summary status', () => {
       await expect(li).toHaveText(/^[^:]+: \d+\.\d{2}$/);
       await expect(li).not.toHaveAttribute('data-state');
     }
+  });
+
+  test('a slow summary for an earlier month does not overwrite the newer month', async ({ page }) => {
+    await addExpenses(page, [['food', 450]]);
+    let release;
+    const held = new Promise((r) => { release = r; });
+    await page.route(/\/api\/summary\?month=2026-01$/, async (route) => { await held; await route.continue(); });
+
+    await page.getByTestId('summary-month').fill('2026-01');
+    await page.getByTestId('summary-month').fill('2026-10');
+    const total = page.getByTestId('summary-total');
+    await expect(total).toHaveText('450.00 / 1500.00 (Left: 1050.00)');
+
+    const stale = page.waitForResponse(/\/api\/summary\?month=2026-01$/);
+    release();
+    await (await stale).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handler run
+    await expect(total).toHaveText('450.00 / 1500.00 (Left: 1050.00)');
+    await expect(total).toHaveAttribute('data-state', 'ok');
+    await expect(line(page, 'food')).toHaveText('food: 450.00 / 500.00 (Left: 50.00)');
   });
 
   test('e-AC8 status lines refresh after add and delete', async ({ page }) => {
