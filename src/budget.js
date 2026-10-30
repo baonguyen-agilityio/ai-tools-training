@@ -48,12 +48,13 @@ export function validateBudget(input) {
 
 /**
  * The month's own budget, else the nearest earlier saved month's, else none.
- * Keys that are not YYYY-MM are ignored; valid keys compare as strings.
+ * Keys that are not YYYY-MM are ignored, and so is a month that is not; valid keys compare as strings.
  * @param {Record<string, Budget>} budgets
  * @param {string} month  YYYY-MM
  * @returns {{ source: string | null, budget: Budget | null }}
  */
 export function effectiveBudget(budgets, month) {
+  if (!MONTH_RE.test(month)) return { source: null, budget: null };
   let source = null;
   for (const key of Object.keys(budgets)) {
     if (MONTH_RE.test(key) && key <= month && (source === null || key > source)) source = key;

@@ -1,4 +1,4 @@
-import { test, before, after } from 'node:test';
+import { test, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -16,6 +16,11 @@ before(async () => {
   budget = await import('../src/budget.js');
   expenses = await import('../src/expenses.js');
 });
+// Fresh budgets file per test so store tests pass alone and in any order.
+let n = 0;
+beforeEach(() => {
+  process.env.BUDGETS_FILE = join(dir, `budgets-${++n}.json`);
+});
 after(() => rmSync(dir, { recursive: true, force: true }));
 
 const B9 = { total: 90000, categories: {} };
@@ -24,7 +29,6 @@ const MSG_TOTAL = /^Error: total must be a positive number$/;
 const MSG_COFFEE = /^Error: coffee: category must be one of food, transport, bills, fun$/;
 
 test('AC1: loadBudgets returns {} and creates no file', () => {
-  rmSync(store.budgetsFile(), { force: true });
   assert.deepEqual(store.loadBudgets(), {});
   assert.ok(!existsSync(store.budgetsFile()));
 });
@@ -64,6 +68,13 @@ test('AC6: empty budgets → null/null', () => {
 test('AC7: keys not matching MONTH_RE are ignored', () => {
   const budgets = { foo: B10, '2026-1': B10, '2026-09': B9 };
   assert.deepEqual(budget.effectiveBudget(budgets, '2026-10'), { source: '2026-09', budget: B9 });
+});
+
+test('AC7: a month argument not matching MONTH_RE → null/null', () => {
+  const budgets = { '2026-09': B9, '2026-10': B10 };
+  for (const month of ['foo', '2026-1', '', '2026-13']) {
+    assert.deepEqual(budget.effectiveBudget(budgets, month), { source: null, budget: null }, `month=${month}`);
+  }
 });
 
 test('AC8: validateBudget returns cents and accepts numeric strings', () => {
