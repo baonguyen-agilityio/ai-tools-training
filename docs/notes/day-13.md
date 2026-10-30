@@ -101,4 +101,4 @@
 - CI failure on fb16b4c: https://github.com/baonguyen-agilityio/ai-tools-training/actions/runs/40998894025
 - CI failure on efac961: https://github.com/baonguyen-agilityio/ai-tools-training/actions/runs/40999155995
 - CI green on 95362b9: https://github.com/baonguyen-agilityio/ai-tools-training/actions/runs/41000057509
-- Drive day-13: TODO
+- Drive day-13: https://drive.google.com/drive/folders/1SfhVXDBPCLk5bWn1_zuWTB2ZijIOGFdZ (req-002-prs-merged.png, req-002d-ci-fail-d-ac7.png, req-002d-ci-green-after-fix.png)
