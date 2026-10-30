@@ -3,6 +3,7 @@ const state = { page: 1, limit: 10, category: '', q: '' };
 let listSeq = 0; // bumped per loadList(); a response for an older request is dropped
 let summarySeq = 0; // same for loadSummary(), so an older month can't overwrite a newer one
 let budgetSeq = 0; // same guard for loadBudget()
+let noticeSeq = 0; // same guard for the post-add notice, so an older add can't overwrite a newer one
 const CAPS = ['food', 'transport', 'bills', 'fun']; // mirrors BUDGET_CATEGORIES in src/budget.js (source of truth)
 
 const $ = (sel) => document.querySelector(sel);
@@ -15,6 +16,7 @@ const budgetForm = $('#budget-form');
 const budgetSource = $('#budget-source');
 const budgetSaved = $('#budget-saved');
 const budgetError = $('#budget-error');
+const budgetNotice = $('#budget-notice');
 
 async function api(path, init) {
   const res = await fetch(path, init);
@@ -56,8 +58,10 @@ async function loadSummary() {
   if (!month) return;
   $('#export-link').href = `/api/export?month=${month}`;
   const seq = ++summarySeq;
-  const { total, byCategory, budget } = await api(`/api/summary?month=${month}`);
-  if (seq !== summarySeq) return;
+  const data = await api(`/api/summary?month=${month}`);
+  // Stale for the picker, but still right for its own month, so the post-add notice can use it.
+  if (seq !== summarySeq) return data;
+  const { total, byCategory, budget } = data;
   // Plain amount, or `spent / budget (Left: …)` with data-state when the line has a budget.
   const render = (el, label, amount, line) => {
     el.textContent = label + money(amount) + (line ? ` / ${money(line.budget)} ${statusText(line)}` : '');
@@ -77,6 +81,25 @@ async function loadSummary() {
       return li;
     }),
   );
+  return data;
+}
+
+// One line per warn/over budget line of a /api/summary response: the category cap, then the total (D4, R27).
+// No summary (failed fetch) or no budget (D9) leaves the list empty and hidden.
+function renderNotice(category, summary) {
+  const budget = summary?.budget;
+  const lines = [[category, budget?.categories?.[category]], ['total', budget?.total]].filter(([, l]) => l && l.state !== 'ok');
+  budgetNotice.replaceChildren(
+    ...lines.map(([name, l]) => {
+      const li = document.createElement('li');
+      li.dataset.testid = 'budget-notice-line';
+      li.dataset.line = name;
+      li.dataset.state = l.state;
+      li.textContent = `${name}: ${l.state === 'over' ? 'over budget' : `${l.pct}% of budget`} ${statusText(l)}`;
+      return li;
+    }),
+  );
+  budgetNotice.hidden = !lines.length;
 }
 
 // Pre-fills the budget form with the month's effective budget; an inherited one is flagged (D3a).
@@ -137,8 +160,9 @@ form.addEventListener('submit', async (ev) => {
   ev.preventDefault();
   formError.hidden = true;
   const input = Object.fromEntries(new FormData(form));
+  let created;
   try {
-    await api('/api/expenses', {
+    created = await api('/api/expenses', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
@@ -149,7 +173,17 @@ form.addEventListener('submit', async (ev) => {
     return;
   }
   form.reset();
-  await Promise.all([loadList(), loadSummary()]);
+  const seq = ++noticeSeq;
+  const month = created.date.slice(0, 7);
+  const pickerMonth = summaryMonth.value;
+  const summary = loadSummary();
+  // Same month: reuse the summary just fetched (one request, R41); otherwise fetch the expense's month.
+  const status = month === pickerMonth ? summary : api(`/api/summary?month=${month}`);
+  const notice = status.then(
+    (s) => seq === noticeSeq && renderNotice(created.category, s),
+    () => seq === noticeSeq && renderNotice(), // failed status fetch hides the notice silently (R29)
+  );
+  await Promise.all([loadList(), summary, notice]);
 });
 
 budgetForm.addEventListener('submit', async (ev) => {

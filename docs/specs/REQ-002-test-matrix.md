@@ -107,19 +107,19 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| f-AC1 | Category `over` → line `food: over budget (Over by …)`, `data-line="food"`, `data-state="over"` | e2e | |
-| f-AC2 | Category `warn` → `food: 90% of budget (Left: …)` | e2e | |
-| f-AC3 | Category `over` + overall `warn` → two lines in order, each with its own `data-state` | e2e | |
-| f-AC4 | **Category outside the four**: only the `total` line | e2e | |
-| f-AC5 | Capped category `ok` + overall `warn` → only the `total` line | e2e | |
-| f-AC6 | All `ok` → list hidden, no lines | e2e | |
-| f-AC7 | **No budget set** for the expense's month → hidden | e2e | |
-| f-AC8 | Lines use the **expense's month** (Nov expense while picker on Oct; Nov inherits Oct) | e2e | |
-| f-AC9 | Next add replaces the lines, never stacks | e2e | |
-| f-AC10 | Failed add leaves the list unchanged | e2e | |
-| f-AC11 | Expense in a month ≠ picker, separate fetch aborted → hidden, no `form-error`, no `pageerror`, picker summary refreshed | e2e | |
-| f-AC12 | Expense saved and listed even when it pushes a line to `over` | e2e | |
-| f-AC13 | Expense month = picker month → exactly one summary request (R41) | e2e | |
+| f-AC1 | Category `over` → line `food: over budget (Over by …)`, `data-line="food"`, `data-state="over"` | e2e | done (REQ-002f) |
+| f-AC2 | Category `warn` → `food: 90% of budget (Left: …)` | e2e | done (REQ-002f) |
+| f-AC3 | Category `over` + overall `warn` → two lines in order, each with its own `data-state` | e2e | done (REQ-002f) |
+| f-AC4 | **Category outside the four**: only the `total` line | e2e | done (REQ-002f) |
+| f-AC5 | Capped category `ok` + overall `warn` → only the `total` line | e2e | done (REQ-002f) |
+| f-AC6 | All `ok` → list hidden, no lines | e2e | done (REQ-002f) |
+| f-AC7 | **No budget set** for the expense's month → hidden | e2e | done (REQ-002f) |
+| f-AC8 | Lines use the **expense's month** (Nov expense while picker on Oct; Nov inherits Oct) | e2e | done (REQ-002f) |
+| f-AC9 | Next add replaces the lines, never stacks | e2e | done (REQ-002f) |
+| f-AC10 | Failed add leaves the list unchanged | e2e | done (REQ-002f) |
+| f-AC11 | Expense in a month ≠ picker, separate fetch aborted → hidden, no `form-error`, no `pageerror`, picker summary refreshed | e2e | done (REQ-002f) |
+| f-AC12 | Expense saved and listed even when it pushes a line to `over` | e2e | done (REQ-002f) |
+| f-AC13 | Expense month = picker month → exactly one summary request (R41) | e2e | done (REQ-002f) |
 
 ## REQ-002g — demo data
 

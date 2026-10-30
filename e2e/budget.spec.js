@@ -344,3 +344,175 @@ test.describe('REQ-002e summary status', () => {
     await expect(line(page, 'food')).toHaveText('food: 0.00 / 500.00 (Left: 500.00)');
   });
 });
+
+test.describe('REQ-002f post-add notice', () => {
+  const NOTE = 'E2E notice';
+  const notice = (page) => page.getByTestId('budget-notice');
+  const lines = (page) => page.getByTestId('budget-notice-line');
+
+  async function addViaApi(page, list, date = '2026-10-15') {
+    for (const [category, amount] of list) {
+      const res = await page.request.post('/api/expenses', { data: { date, amount, category, note: NOTE } });
+      expect(res.ok()).toBe(true);
+    }
+  }
+
+  async function addViaForm(page, { date = '2026-10-15', amount, category }) {
+    await page.getByTestId('input-date').fill(date);
+    await page.getByTestId('input-amount').fill(String(amount));
+    await page.getByTestId('input-category').fill(category);
+    await page.getByTestId('input-note').fill(NOTE);
+    await page.getByTestId('submit').click();
+  }
+
+  async function expectLines(page, expected) {
+    await expect(lines(page)).toHaveText(expected.map(([, , text]) => text));
+    for (const [i, [name, state]] of expected.entries()) {
+      await expect(lines(page).nth(i)).toHaveAttribute('data-line', name);
+      await expect(lines(page).nth(i)).toHaveAttribute('data-state', state);
+    }
+    await expect(notice(page)).toBeVisible();
+  }
+
+  test.beforeEach(async ({ page }) => {
+    const res = await page.request.put('/api/budget?month=2026-10', { data: BASELINE });
+    expect(res.ok()).toBe(true);
+    await page.goto('/');
+    await page.getByTestId('summary-month').fill('2026-10');
+  });
+
+  test.afterEach(async ({ page }) => {
+    const { items } = await (await page.request.get(`/api/expenses?limit=100&q=${encodeURIComponent(NOTE)}`)).json();
+    for (const e of items.filter((e) => e.note === NOTE)) await page.request.delete(`/api/expenses/${e.id}`);
+  });
+
+  test('f-AC1 category over shows an over-budget line', async ({ page }) => {
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expectLines(page, [['food', 'over', 'food: over budget (Over by 35.50)']]);
+  });
+
+  test('f-AC2 category warn shows a percent line', async ({ page }) => {
+    await addViaForm(page, { amount: 450, category: 'food' });
+    await expectLines(page, [['food', 'warn', 'food: 90% of budget (Left: 50.00)']]);
+  });
+
+  test('f-AC3 category over and total warn show two lines in order', async ({ page }) => {
+    await addViaApi(page, [['bills', 785]]);
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expectLines(page, [
+      ['food', 'over', 'food: over budget (Over by 35.50)'],
+      ['total', 'warn', 'total: 88% of budget (Left: 179.50)'],
+    ]);
+  });
+
+  test('f-AC4 uncapped category shows only the total line', async ({ page }) => {
+    await addViaApi(page, [['bills', 1290]]);
+    await addViaForm(page, { amount: 30, category: 'coffee' });
+    await expectLines(page, [['total', 'warn', 'total: 88% of budget (Left: 180.00)']]);
+  });
+
+  test('f-AC5 capped ok category shows only the total line', async ({ page }) => {
+    await addViaApi(page, [['bills', 1220.5]]);
+    await addViaForm(page, { amount: 100, category: 'fun' });
+    await expectLines(page, [['total', 'warn', 'total: 88% of budget (Left: 179.50)']]);
+  });
+
+  test('f-AC6 all ok hides the notice', async ({ page }) => {
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expect(lines(page)).toHaveCount(1);
+    await addViaForm(page, { amount: 10, category: 'fun' });
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+  });
+
+  test('f-AC7 month without budget hides the notice', async ({ page }) => {
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expect(lines(page)).toHaveCount(1);
+    await addViaForm(page, { date: '2026-01-15', amount: 535.5, category: 'food' });
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+  });
+
+  test('f-AC8 lines use the expense month, the picker stays', async ({ page }) => {
+    await addViaApi(page, [['food', 100]]); // October food stays ok; only November reaches warn
+    await addViaForm(page, { date: '2026-11-02', amount: 450, category: 'food' });
+    await expectLines(page, [['food', 'warn', 'food: 90% of budget (Left: 50.00)']]);
+    await expect(page.getByTestId('summary-month')).toHaveValue('2026-10');
+  });
+
+  test('f-AC9 the next add replaces the lines', async ({ page }) => {
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expectLines(page, [['food', 'over', 'food: over budget (Over by 35.50)']]);
+    await addViaForm(page, { amount: 785, category: 'bills' });
+    await expectLines(page, [['total', 'warn', 'total: 88% of budget (Left: 179.50)']]);
+  });
+
+  test('f-AC10 a failed add leaves the notice unchanged', async ({ page }) => {
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expectLines(page, [['food', 'over', 'food: over budget (Over by 35.50)']]);
+    await addViaForm(page, { amount: 10, category: '   ' }); // passes `required`, server answers 400
+    await expect(page.getByTestId('form-error')).toHaveText('category is required');
+    await expectLines(page, [['food', 'over', 'food: over budget (Over by 35.50)']]);
+  });
+
+  test('f-AC11 an aborted other-month fetch hides the notice silently', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err));
+    await page.route(/\/api\/summary\?month=2026-11$/, (route) => route.abort());
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expect(lines(page)).toHaveCount(1);
+
+    const aborted = page.waitForEvent('requestfailed', (r) => r.url().includes('month=2026-11'));
+    const october = page.waitForResponse(/\/api\/summary\?month=2026-10$/);
+    await addViaForm(page, { date: '2026-11-02', amount: 450, category: 'food' });
+    await aborted;
+    await october;
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+    await expect(page.getByTestId('form-error')).toBeHidden();
+    expect(errors).toEqual([]);
+  });
+
+  test('f-AC12 an over-budget expense is still saved and listed', async ({ page }) => {
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expect(lines(page)).toHaveCount(1);
+    await expect(page.getByTestId('expense-row').filter({ hasText: NOTE })).toHaveCount(1);
+    const { items } = await (await page.request.get(`/api/expenses?limit=100&q=${encodeURIComponent(NOTE)}`)).json();
+    expect(items.map((e) => [e.date, e.amount, e.category])).toEqual([['2026-10-15', 535.5, 'food']]);
+  });
+
+  test('f-AC13 same month makes exactly one summary request', async ({ page }) => {
+    // Requests in issue order; only those after the POST belong to this add (page-load fetches may still be in flight).
+    const requests = [];
+    page.on('request', (r) => requests.push(r));
+    const list = page.waitForResponse((r) => r.url().includes('/api/expenses?') && r.request().method() === 'GET');
+    await addViaForm(page, { date: '2026-10-20', amount: 450, category: 'food' });
+    await list;
+    await expectLines(page, [['food', 'warn', 'food: 90% of budget (Left: 50.00)']]);
+    const afterPost = requests.slice(requests.findIndex((r) => r.method() === 'POST'));
+    expect(afterPost.filter((r) => /\/api\/summary\?/.test(r.url())).map((r) => new URL(r.url()).search)).toEqual(['?month=2026-10']);
+  });
+
+  test('a slow summary from an earlier add does not overwrite a newer add', async ({ page }) => {
+    let release;
+    const held = new Promise((r) => { release = r; });
+    let first = true;
+    await page.route(/\/api\/summary\?month=2026-10$/, async (route) => {
+      if (!first) return route.fallback();
+      first = false;
+      await held;
+      return route.continue();
+    });
+
+    const firstRequest = page.waitForRequest(/\/api\/summary\?month=2026-10$/);
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    const req = await firstRequest;
+    await addViaForm(page, { date: '2026-11-02', amount: 450, category: 'food' });
+    await expectLines(page, [['food', 'warn', 'food: 90% of budget (Left: 50.00)']]);
+
+    release();
+    await (await req.response()).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handler run
+    await expectLines(page, [['food', 'warn', 'food: 90% of budget (Left: 50.00)']]);
+  });
+});
