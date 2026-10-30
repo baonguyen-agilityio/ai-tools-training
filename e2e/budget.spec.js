@@ -83,7 +83,7 @@ test.describe('REQ-002d set budget', () => {
     await expect(page.getByTestId('budget-saved')).toHaveText('Saved for 2027-01.');
   });
 
-  test('d-AC5 a save answered after a month change does not show budget-saved', async ({ page }) => {
+  test('d-AC5b a save answered after a month change does not show budget-saved', async ({ page }) => {
     await page.getByTestId('summary-month').fill('2027-03');
     await expect(field(page, 'total')).not.toHaveValue('');
     const release = await holdPuts(page);
@@ -135,10 +135,12 @@ test.describe('REQ-002d set budget', () => {
 
   test('d-AC7 server error shows in budget-error and clears on retry and month change', async ({ page }) => {
     const message = 'coffee: category must be one of food, transport, bills, fun';
-    let mode = 'error'; // 'error': PUT answers 400; 'hold': budget requests never answered
+    // Each request's answer is fixed by its position, not by when the route handler happens to run.
+    const answers = { PUT: ['error', 'hold', 'error'], GET: ['pass', 'hold'] };
     await page.route(BUDGET_URL, (route) => {
-      if (mode === 'hold') return;
-      if (route.request().method() === 'PUT') return route.fulfill({ status: 400, json: { error: message } });
+      const answer = answers[route.request().method()].shift();
+      if (answer === 'hold') return; // never answered
+      if (answer === 'error') return route.fulfill({ status: 400, json: { error: message } });
       return route.fallback();
     });
     const error = page.getByTestId('budget-error');
@@ -147,23 +149,48 @@ test.describe('REQ-002d set budget', () => {
     await expect(field(page, 'total')).toHaveValue('1500.00');
     await field(page, 'total').fill('1600');
     await page.getByTestId('budget-save').click();
+    await expect(error).toBeVisible();
     await expect(error).toHaveText(message);
     await expect(field(page, 'total')).toHaveValue('1600');
     await expect(field(page, 'food')).toHaveValue('500.00');
     await expect(page.getByTestId('budget-saved')).toBeHidden();
 
-    mode = 'hold';
-    await page.getByTestId('budget-save').click();
+    await page.getByTestId('budget-save').click(); // PUT held
     await expect(error).toBeHidden();
 
-    mode = 'error';
+    // toHaveText alone would match the hidden <p>, which keeps the old text; wait for the 400 to show it.
     await page.getByTestId('budget-save').click();
+    await expect(error).toBeVisible();
     await expect(error).toHaveText(message);
 
-    mode = 'hold';
-    await page.getByTestId('summary-month').fill('2026-11');
+    await page.getByTestId('summary-month').fill('2026-11'); // GET held
     await expect(error).toBeHidden();
     await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
+  test('d-AC7b a save error answered after a month change stays hidden', async ({ page }) => {
+    const message = 'coffee: category must be one of food, transport, bills, fun';
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    await page.route(BUDGET_URL, async (route) => {
+      if (route.request().method() !== 'PUT') return route.fallback();
+      await gate;
+      return route.fulfill({ status: 400, json: { error: message } });
+    });
+    await page.getByTestId('summary-month').fill('2026-12');
+    await expect(field(page, 'total')).toHaveValue('1500.00');
+    const put = page.waitForRequest((r) => r.method() === 'PUT' && BUDGET_URL.test(r.url()));
+    await page.getByTestId('budget-save').click();
+    await put;
+
+    await page.getByTestId('summary-month').fill('2026-11');
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2026-10, not saved');
+    const answered = page.waitForResponse((r) => r.request().method() === 'PUT');
+    release();
+    await (await answered).finished();
+    // No event marks "handler ignored the response"; one macrotask lets its continuation run.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    await expect(page.getByTestId('budget-error')).toBeHidden();
   });
 
   test('d-AC8 clearing a cap removes it', async ({ page }) => {

@@ -144,18 +144,18 @@ budgetForm.addEventListener('submit', async (ev) => {
   const f = budgetForm.elements;
   // Numbers on the wire, empty caps omitted (R18).
   const categories = Object.fromEntries(CAPS.filter((cat) => f[cat].value).map((cat) => [cat, Number(f[cat].value)]));
-  try {
-    await api(`/api/budget?month=${month}`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ total: Number(f.total.value), categories }),
-    });
-  } catch (err) {
-    budgetError.textContent = err.message;
+  const failure = await api(`/api/budget?month=${month}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ total: Number(f.total.value), categories }),
+  }).then(() => null, (err) => err);
+  // Month changed mid-save: the form now shows another month, so neither outcome is reported there.
+  if (summaryMonth.value !== month) return;
+  if (failure) {
+    budgetError.textContent = failure.message;
     budgetError.hidden = false;
     return;
   }
-  if (summaryMonth.value !== month) return; // month changed mid-save: the form now shows another month
   budgetSaved.textContent = `Saved for ${month}.`;
   budgetSaved.hidden = false;
   await Promise.all([loadBudget(), loadSummary()]);
