@@ -79,15 +79,15 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| d-AC1 | Picking `2026-10` pre-fills saved values, source note hidden | e2e | |
-| d-AC2 | **Copied from previous month**: fields pre-filled, note exactly `copied from 2026-10, not saved` | e2e | |
-| d-AC3 | **No budget set** (`2026-01`): fields empty, note hidden | e2e | |
-| d-AC4 | Save on `2027-01` sends numeric PUT body, empty caps omitted, `budget-saved` shows `Saved for 2027-01.` | e2e | |
-| d-AC5 | Saving `2027-02` leaves `2026-10` unchanged; `budget-saved` and `budget-error` hidden on month change | e2e | |
-| d-AC6 | Empty / 0 total blocked by native validation, no request | e2e | |
-| d-AC7 | Routed 400 (keyed category message) shown in `budget-error`, inputs keep values; hidden again on save start and month change | e2e | |
-| d-AC8 | Clearing `fun` and saving omits it from the body; field empty after reload; `GET /api/budget` has no `fun` | e2e | |
-| d-AC9 | `budget-form` bounding box ≤ 390 px at phone width | e2e (viewport 390 px) | |
+| d-AC1 | Picking `2026-10` pre-fills saved values, source note hidden | e2e | done (REQ-002d) |
+| d-AC2 | **Copied from previous month**: fields pre-filled, note exactly `copied from 2026-10, not saved` | e2e | done (REQ-002d) |
+| d-AC3 | **No budget set** (`2026-01`): fields empty, note hidden | e2e | done (REQ-002d) |
+| d-AC4 | Save on `2027-01` sends numeric PUT body, empty caps omitted, `budget-saved` shows `Saved for 2027-01.` | e2e | done (REQ-002d) |
+| d-AC5 | Saving `2027-02` leaves `2026-10` unchanged; `budget-saved` and `budget-error` hidden on month change | e2e | done (REQ-002d) |
+| d-AC6 | Empty / 0 total blocked by native validation, no request | e2e | done (REQ-002d) |
+| d-AC7 | Routed 400 (keyed category message) shown in `budget-error`, inputs keep values; hidden again on save start and month change | e2e | done (REQ-002d) |
+| d-AC8 | Clearing `fun` and saving omits it from the body; field empty after reload; `GET /api/budget` has no `fun` | e2e | done (REQ-002d) |
+| d-AC9 | `budget-form` bounding box ≤ 390 px at phone width | e2e (viewport 390 px) | done (REQ-002d) |
 
 ## REQ-002e — status display
 

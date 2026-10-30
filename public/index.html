@@ -52,6 +52,17 @@
     <section>
       <h2>Monthly summary</h2>
       <label>Month <input id="summary-month" type="month" data-testid="summary-month" /></label>
+      <form id="budget-form" data-testid="budget-form">
+        <label>Budget total <input name="total" type="number" step="0.01" min="0.01" required data-testid="budget-total" /></label>
+        <label>food <input name="food" type="number" step="0.01" min="0.01" data-testid="budget-cap-food" /></label>
+        <label>transport <input name="transport" type="number" step="0.01" min="0.01" data-testid="budget-cap-transport" /></label>
+        <label>bills <input name="bills" type="number" step="0.01" min="0.01" data-testid="budget-cap-bills" /></label>
+        <label>fun <input name="fun" type="number" step="0.01" min="0.01" data-testid="budget-cap-fun" /></label>
+        <button type="submit" data-testid="budget-save">Save</button>
+        <p id="budget-source" data-testid="budget-source" hidden></p>
+        <p id="budget-saved" data-testid="budget-saved" hidden></p>
+        <p id="budget-error" class="error" data-testid="budget-error" hidden></p>
+      </form>
       <p>Total: <strong id="summary-total" data-testid="summary-total"></strong></p>
       <p><a id="export-link" href="#" download data-testid="export-link">Export CSV</a></p>
       <ul id="summary-categories"></ul>

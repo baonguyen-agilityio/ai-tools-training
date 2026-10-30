@@ -1,6 +1,8 @@
 // Minimal client: fetch from the API, render, re-fetch after every mutation.
 const state = { page: 1, limit: 10, category: '', q: '' };
 let listSeq = 0; // bumped per loadList(); a response for an older request is dropped
+let budgetSeq = 0; // same guard for loadBudget()
+const CAPS = ['food', 'transport', 'bills', 'fun']; // mirrors BUDGET_CATEGORIES in src/budget.js (source of truth)
 
 const $ = (sel) => document.querySelector(sel);
 const rows = $('#expense-rows');
@@ -8,6 +10,10 @@ const pageInfo = $('#page-info');
 const form = $('#expense-form');
 const formError = $('#form-error');
 const summaryMonth = $('#summary-month');
+const budgetForm = $('#budget-form');
+const budgetSource = $('#budget-source');
+const budgetSaved = $('#budget-saved');
+const budgetError = $('#budget-error');
 
 async function api(path, init) {
   const res = await fetch(path, init);
@@ -61,6 +67,25 @@ async function loadSummary() {
   );
 }
 
+// Pre-fills the budget form with the month's effective budget; an inherited one is flagged (D3a).
+async function loadBudget() {
+  const month = summaryMonth.value;
+  if (!month) return;
+  const seq = ++budgetSeq;
+  const { source, budget } = await api(`/api/budget?month=${month}`);
+  if (seq !== budgetSeq) return;
+  const f = budgetForm.elements;
+  f.total.value = budget ? money(budget.total) : '';
+  for (const cat of CAPS) f[cat].value = budget?.categories[cat] ? money(budget.categories[cat]) : '';
+  budgetSource.textContent = `copied from ${source}, not saved`;
+  budgetSource.hidden = !source || source === month;
+}
+
+function hideBudgetMessages() {
+  budgetSaved.hidden = true;
+  budgetError.hidden = true;
+}
+
 /**
  * Escaped text with every literal, case-insensitive match of the search term
  * wrapped in <mark>. Matching runs on the raw note and escaping on each piece,
@@ -112,6 +137,30 @@ form.addEventListener('submit', async (ev) => {
   await Promise.all([loadList(), loadSummary()]);
 });
 
+budgetForm.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  hideBudgetMessages();
+  const month = summaryMonth.value;
+  const f = budgetForm.elements;
+  // Numbers on the wire, empty caps omitted (R18).
+  const categories = Object.fromEntries(CAPS.filter((cat) => f[cat].value).map((cat) => [cat, Number(f[cat].value)]));
+  const failure = await api(`/api/budget?month=${month}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ total: Number(f.total.value), categories }),
+  }).then(() => null, (err) => err);
+  // Month changed mid-save: the form now shows another month, so neither outcome is reported there.
+  if (summaryMonth.value !== month) return;
+  if (failure) {
+    budgetError.textContent = failure.message;
+    budgetError.hidden = false;
+    return;
+  }
+  budgetSaved.textContent = `Saved for ${month}.`;
+  budgetSaved.hidden = false;
+  await Promise.all([loadBudget(), loadSummary()]);
+});
+
 rows.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('[data-testid="delete-btn"]');
   if (!btn) return;
@@ -140,8 +189,10 @@ $('#search-note').addEventListener('input', (ev) => {
 $('#page-prev').addEventListener('click', () => { state.page -= 1; loadList(); });
 $('#page-next').addEventListener('click', () => { state.page += 1; loadList(); });
 summaryMonth.addEventListener('change', loadSummary);
+summaryMonth.addEventListener('change', () => { hideBudgetMessages(); loadBudget(); });
 
 // --- init ---
 summaryMonth.value = currentMonth();
 loadList();
 loadSummary();
+loadBudget();
