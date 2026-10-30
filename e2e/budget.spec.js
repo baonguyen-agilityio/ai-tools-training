@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 
 // Month invariant (R21, R39): saving tests use months >= 2027-01 (AC8 re-saves the 2026-10 baseline,
 // restored by beforeEach), inherited reads and tests that never write (AC6, AC7) use 2026-11 / 2026-12,
-// "no budget" uses 2026-01.
+// "no budget" uses 2026-01. Exception: d-AC5c saves and reads inheritance on 2027-04..06, e-AC11 saves
+// 2027-07 / 2027-08; no other test uses 2027-04..08.
 const BASELINE = { total: 1500, categories: { food: 500, fun: 150 } };
 const BUDGET_URL = /\/api\/budget\?/;
 
@@ -100,6 +101,29 @@ test.describe('REQ-002d set budget', () => {
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 50)));
     await expect(page.getByTestId('budget-saved')).toBeHidden();
     await expect(page.getByTestId('budget-source')).toHaveText('copied from 2026-10, not saved');
+  });
+
+  test('d-AC5c a save answered after a month change refreshes the new month', async ({ page }) => {
+    const res = await page.request.put('/api/budget?month=2027-04', { data: BASELINE });
+    expect(res.ok()).toBe(true);
+    await page.getByTestId('summary-month').fill('2027-05');
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2027-04, not saved');
+    await field(page, 'total').fill('1800');
+    await field(page, 'food').fill('600');
+    const release = await holdPuts(page);
+    const put = page.waitForRequest((r) => r.method() === 'PUT' && BUDGET_URL.test(r.url()));
+    await page.getByTestId('budget-save').click();
+    await put;
+
+    await page.getByTestId('summary-month').fill('2027-06');
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2027-04, not saved');
+    await expectBaseline(page);
+    release();
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2027-05, not saved');
+    await expect(field(page, 'total')).toHaveValue('1800.00');
+    await expect(field(page, 'food')).toHaveValue('600.00');
+    await expect(page.getByTestId('summary-total')).toHaveText('0.00 / 1800.00 (Left: 1800.00)');
+    await expect(page.getByTestId('budget-saved')).toBeHidden();
   });
 
   test('d-AC5 saving one month leaves the source month untouched', async ({ page }) => {
@@ -343,6 +367,75 @@ test.describe('REQ-002e summary status', () => {
     await expect(page.getByTestId('summary-total')).toHaveText('0.00 / 1500.00 (Left: 1500.00)');
     await expect(line(page, 'food')).toHaveText('food: 0.00 / 500.00 (Left: 500.00)');
   });
+
+  test('e-AC10 an empty month clears the summary, the budget form and the export link', async ({ page }) => {
+    // Fulfilled PUT: shows budget-saved without writing 2026-11 (R39).
+    await page.route(/\/api\/budget\?/, (route) =>
+      route.request().method() === 'PUT' ? route.fulfill({ json: {} }) : route.fallback());
+    await page.getByTestId('summary-month').fill('2026-11');
+    await expect(page.getByTestId('budget-source')).toHaveText('copied from 2026-10, not saved');
+    await page.getByTestId('budget-save').click();
+    await expect(page.getByTestId('budget-saved')).toHaveText('Saved for 2026-11.');
+    await expect(page.getByTestId('budget-source')).toBeVisible();
+    await expect(page.getByTestId('summary-total')).toHaveAttribute('data-state', 'ok');
+    await expect(page.getByTestId('summary-category')).toHaveCount(2);
+
+    await page.getByTestId('summary-month').fill('');
+    const total = page.getByTestId('summary-total');
+    await expect(total).toHaveText('');
+    await expect(total).not.toHaveAttribute('data-state');
+    await expect(page.getByTestId('summary-category')).toHaveCount(0);
+    for (const id of ['budget-total', ...['food', 'transport', 'bills', 'fun'].map((c) => `budget-cap-${c}`)]) {
+      await expect(page.getByTestId(id)).toHaveValue('');
+    }
+    await expect(page.getByTestId('budget-source')).toBeHidden();
+    await expect(page.getByTestId('budget-saved')).toBeHidden();
+    await expect(page.getByTestId('export-link')).not.toHaveAttribute('href');
+  });
+
+  test('e-AC10b responses answered after the month is cleared stay dropped', async ({ page }) => {
+    let release;
+    const held = new Promise((r) => { release = r; });
+    const MONTH_2026_11 = /\/api\/(summary|budget)\?month=2026-11$/;
+    await page.route(MONTH_2026_11, async (route) => { await held; await route.continue(); });
+
+    const summaryReq = page.waitForRequest(/\/api\/summary\?month=2026-11$/);
+    const budgetReq = page.waitForRequest(/\/api\/budget\?month=2026-11$/);
+    await page.getByTestId('summary-month').fill('2026-11');
+    const reqs = await Promise.all([summaryReq, budgetReq]);
+    await page.getByTestId('summary-month').fill('');
+    await expect(page.getByTestId('summary-total')).toHaveText('');
+
+    release();
+    for (const r of reqs) await (await r.response()).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handlers run
+    await expect(page.getByTestId('summary-total')).toHaveText('');
+    await expect(page.getByTestId('summary-category')).toHaveCount(0);
+    for (const id of ['budget-total', ...['food', 'transport', 'bills', 'fun'].map((c) => `budget-cap-${c}`)]) {
+      await expect(page.getByTestId(id)).toHaveValue('');
+    }
+    await expect(page.getByTestId('budget-source')).toBeHidden();
+  });
+
+  test('e-AC11 unspent capped categories follow the fixed order (R11)', async ({ page }) => {
+    // Caps PUT in scrambled insertion order; months with no expenses.
+    const put = (month, categories) => page.request.put(`/api/budget?month=${month}`, { data: { total: 1000, categories } });
+    expect((await put('2027-07', { bills: 200, transport: 100 })).ok()).toBe(true);
+    expect((await put('2027-08', { fun: 40, bills: 30, food: 10, transport: 20 })).ok()).toBe(true);
+
+    await page.getByTestId('summary-month').fill('2027-07');
+    await expect(page.getByTestId('summary-category')).toHaveText([
+      'transport: 0.00 / 100.00 (Left: 100.00)',
+      'bills: 0.00 / 200.00 (Left: 200.00)',
+    ]);
+    await page.getByTestId('summary-month').fill('2027-08');
+    await expect(page.getByTestId('summary-category')).toHaveText([
+      'food: 0.00 / 10.00 (Left: 10.00)',
+      'transport: 0.00 / 20.00 (Left: 20.00)',
+      'bills: 0.00 / 30.00 (Left: 30.00)',
+      'fun: 0.00 / 40.00 (Left: 40.00)',
+    ]);
+  });
 });
 
 test.describe('REQ-002f post-add notice', () => {
@@ -491,6 +584,60 @@ test.describe('REQ-002f post-add notice', () => {
     await expectLines(page, [['food', 'warn', 'food: 90% of budget (Left: 50.00)']]);
     const afterPost = requests.slice(requests.findIndex((r) => r.method() === 'POST'));
     expect(afterPost.filter((r) => /\/api\/summary\?/.test(r.url())).map((r) => new URL(r.url()).search)).toEqual(['?month=2026-10']);
+  });
+
+  test('f-AC14 any delete hides the notice (R42)', async ({ page }) => {
+    await addViaApi(page, [['fun', 10]]);
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expectLines(page, [['food', 'over', 'food: over budget (Over by 35.50)']]);
+    await page.getByTestId('expense-row').filter({ hasText: NOTE }).filter({ hasText: 'fun' }).getByTestId('delete-btn').click();
+    await expect(page.getByTestId('expense-row').filter({ hasText: NOTE })).toHaveCount(1);
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+  });
+
+  test('f-AC14b a delete while an add is pending keeps the notice hidden (R42)', async ({ page }) => {
+    await addViaApi(page, [['fun', 10]]);
+    let release;
+    const held = new Promise((r) => { release = r; });
+    let first = true;
+    await page.route(/\/api\/summary\?month=2026-10$/, async (route) => {
+      if (!first) return route.fallback();
+      first = false;
+      await held;
+      return route.continue();
+    });
+
+    const addSummary = page.waitForRequest(/\/api\/summary\?month=2026-10$/);
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    const req = await addSummary;
+    const funRow = page.getByTestId('expense-row').filter({ hasText: NOTE }).filter({ hasText: 'fun' });
+    const deleted = page.waitForResponse((r) => r.request().method() === 'DELETE');
+    await funRow.getByTestId('delete-btn').click();
+    await deleted;
+
+    release();
+    await (await req.response()).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handler run
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+  });
+
+  test('f-AC15 a failed same-month summary hides the notice silently (R29)', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err));
+    await addViaForm(page, { amount: 535.5, category: 'food' });
+    await expect(lines(page)).toHaveCount(1);
+    await page.route(/\/api\/summary\?month=2026-10$/, (route) => route.abort());
+
+    const aborted = page.waitForEvent('requestfailed', (r) => r.url().includes('month=2026-10'));
+    await addViaForm(page, { amount: 10, category: 'food' });
+    await aborted;
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the rejection surface
+    await expect(notice(page)).toBeHidden();
+    await expect(lines(page)).toHaveCount(0);
+    await expect(page.getByTestId('form-error')).toBeHidden();
+    expect(errors).toEqual([]);
   });
 
   test('a slow summary from an earlier add does not overwrite a newer add', async ({ page }) => {

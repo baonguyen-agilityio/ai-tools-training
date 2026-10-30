@@ -84,6 +84,7 @@ implementing PR.
 | d-AC3 | **No budget set** (`2026-01`): fields empty, note hidden | e2e | done (REQ-002d) |
 | d-AC4 | Save on `2027-01` sends numeric PUT body, empty caps omitted, `budget-saved` shows `Saved for 2027-01.` | e2e | done (REQ-002d) |
 | d-AC5 | Saving `2027-02` leaves `2026-10` unchanged; `budget-saved` and `budget-error` hidden on month change | e2e | done (REQ-002d) |
+| d-AC5c | Save on `2027-05` answered after switching to `2027-06` → `2027-06` reloads: source `copied from 2027-05`, new values, summary updated, no `Saved for` | e2e | done (QA#1) |
 | d-AC6 | Empty / 0 total blocked by native validation, no request | e2e | done (REQ-002d) |
 | d-AC7 | Routed 400 (keyed category message) shown in `budget-error`, inputs keep values; hidden again on save start and month change | e2e | done (REQ-002d) |
 | d-AC8 | Clearing `fun` and saving omits it from the body; field empty after reload; `GET /api/budget` has no `fun` | e2e | done (REQ-002d) |
@@ -102,6 +103,9 @@ implementing PR.
 | e-AC7 | **No budget set** (`2026-01`) → total and category lines identical to today | e2e | done (REQ-002e) |
 | e-AC8 | Lines refresh after add / delete without reload | e2e | done (REQ-002e) |
 | e-AC9 | Existing `expense.spec.js` summary assertions pass unchanged (months ≤ 2026-04) | e2e (existing) | done (REQ-002e) |
+| e-AC10 | Empty month → total and category lines cleared, no `data-state`, budget form empty, `budget-source` / `budget-saved` hidden, export link has no `href` | e2e | done (QA#3) |
+| e-AC10b | Summary and budget responses held for `2026-11`, picker cleared, then released → summary and budget form stay empty (`summarySeq` / `budgetSeq` bump) | e2e | done (QA#3) |
+| e-AC11 | Unspent caps only, saved in scrambled order → lines in fixed order food, transport, bills, fun (R11) | e2e | done (pin) |
 
 ## REQ-002f — post-add notice lines
 
@@ -120,6 +124,9 @@ implementing PR.
 | f-AC11 | Expense in a month ≠ picker, separate fetch aborted → hidden, no `form-error`, no `pageerror`, picker summary refreshed | e2e | done (REQ-002f) |
 | f-AC12 | Expense saved and listed even when it pushes a line to `over` | e2e | done (REQ-002f) |
 | f-AC13 | Expense month = picker month → exactly one summary request (R41) | e2e | done (REQ-002f) |
+| f-AC14 | Any delete hides the notice (R42) | e2e | done (QA#2) |
+| f-AC14b | Add's summary held, a row deleted, then released → notice stays hidden (`noticeSeq` bump, R42) | e2e | done (QA#2) |
+| f-AC15 | Same-month summary fetch aborted → hidden, no `form-error`, no `pageerror` (R29) | e2e | done (Day 13 carry-over) |
 
 ## REQ-002g — demo data
 

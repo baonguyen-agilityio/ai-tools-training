@@ -55,9 +55,16 @@ async function loadList() {
 
 async function loadSummary() {
   const month = summaryMonth.value;
-  if (!month) return;
-  $('#export-link').href = `/api/export?month=${month}`;
   const seq = ++summarySeq;
+  // Empty picker: nothing to show, and the bumped seq drops any response still in flight.
+  if (!month) {
+    $('#export-link').removeAttribute('href'); // `href="#"` + `download` would save the page itself
+    $('#summary-total').textContent = '';
+    delete $('#summary-total').dataset.state;
+    $('#summary-categories').replaceChildren();
+    return;
+  }
+  $('#export-link').href = `/api/export?month=${month}`;
   const data = await api(`/api/summary?month=${month}`);
   // Stale for the picker, but still right for its own month, so the post-add notice can use it.
   if (seq !== summarySeq) return data;
@@ -105,9 +112,8 @@ function renderNotice(category, summary) {
 // Pre-fills the budget form with the month's effective budget; an inherited one is flagged (D3a).
 async function loadBudget() {
   const month = summaryMonth.value;
-  if (!month) return;
   const seq = ++budgetSeq;
-  const { source, budget } = await api(`/api/budget?month=${month}`);
+  const { source, budget } = month ? await api(`/api/budget?month=${month}`) : {}; // empty picker clears the form
   if (seq !== budgetSeq) return;
   const f = budgetForm.elements;
   f.total.value = budget ? money(budget.total) : '';
@@ -183,7 +189,8 @@ form.addEventListener('submit', async (ev) => {
     (s) => seq === noticeSeq && renderNotice(created.category, s),
     () => seq === noticeSeq && renderNotice(), // failed status fetch hides the notice silently (R29)
   );
-  await Promise.all([loadList(), summary, notice]);
+  // A failed summary is already handled by `notice` (same month) or harmless (other month): never unhandled (R29).
+  await Promise.all([loadList(), summary.catch(() => {}), notice]);
 });
 
 budgetForm.addEventListener('submit', async (ev) => {
@@ -198,21 +205,29 @@ budgetForm.addEventListener('submit', async (ev) => {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ total: Number(f.total.value), categories }),
   }).then(() => null, (err) => err);
-  // Month changed mid-save: the form now shows another month, so neither outcome is reported there.
-  if (summaryMonth.value !== month) return;
+  // Month changed mid-save: the form now shows another month, so neither outcome is reported there,
+  // but a successful save may change what that month inherits, so it is still reloaded.
+  const changed = summaryMonth.value !== month;
   if (failure) {
-    budgetError.textContent = failure.message;
-    budgetError.hidden = false;
+    if (!changed) {
+      budgetError.textContent = failure.message;
+      budgetError.hidden = false;
+    }
     return;
   }
-  budgetSaved.textContent = `Saved for ${month}.`;
-  budgetSaved.hidden = false;
+  if (!changed) {
+    budgetSaved.textContent = `Saved for ${month}.`;
+    budgetSaved.hidden = false;
+  }
   await Promise.all([loadBudget(), loadSummary()]);
 });
 
 rows.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('[data-testid="delete-btn"]');
   if (!btn) return;
+  // The notice describes the last add only; any delete hides it, and the bump drops a pending add's notice (R42).
+  ++noticeSeq;
+  renderNotice();
   try {
     await api(`/api/expenses/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
   } catch (err) {
