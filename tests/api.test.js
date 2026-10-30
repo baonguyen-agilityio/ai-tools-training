@@ -282,6 +282,13 @@ test('b-AC10 PUT /api/budget rejects invalid budgets and writes nothing', async 
   assert.deepEqual(store.loadBudgets(), saved);
 });
 
+test('b-AC10 PUT /api/budget ignores unknown top-level keys', async () => {
+  const res = await putBudget('2026-10', { total: 1500, note: 'x' });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).budget, { total: 1500, categories: {} });
+  assert.deepEqual(store.loadBudgets()['2026-10'], { total: 150000, categories: {} });
+});
+
 test('b-AC11 /api/budget rejects other methods with 405', async () => {
   for (const method of ['POST', 'DELETE', 'PATCH']) {
     const res = await api('/api/budget?month=2026-10', { method });
@@ -294,6 +301,10 @@ test('b-AC12 GET /api/budget returns 500 on an unreadable budgets file and keeps
   const res = await api('/api/budget?month=2026-10');
   assert.equal(res.status, 500);
   assert.deepEqual(await res.json(), { error: 'internal error' });
+  const put = await putBudget('2026-10', BUDGET);
+  assert.equal(put.status, 500);
+  assert.deepEqual(await put.json(), { error: 'internal error' });
+  assert.equal(readFileSync(process.env.BUDGETS_FILE, 'utf8'), '{not json');
   store.resetFromSeed();
   assert.equal((await api('/api/budget?month=2026-10')).status, 200);
 });
