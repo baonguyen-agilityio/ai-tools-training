@@ -20,7 +20,7 @@ Install and run:
 npm install                      # only dev dep: @playwright/test
 npx playwright install chromium  # browser for e2e, once
 npm run seed                     # resets data/expenses.json + data/budgets.json from the seeds
-npm run seed:demo                # same, from data/demo-seed.json + data/demo-budgets.json (demo month)
+npm run seed:demo                # same, from data/demo-seed.json + data/demo-budgets.json (October 2026 demo)
 npm start                        # http://localhost:3000
 ```
 

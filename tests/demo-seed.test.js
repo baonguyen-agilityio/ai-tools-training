@@ -38,7 +38,7 @@ test('g-AC3: demo overall 88% warn, food 90% warn', () => {
 test('g-AC4: demo fun 66% ok, categories exactly food, fun', () => {
   const { budget } = summaryWithBudget(demoExpenses, demoBudgets, '2026-10');
   assert.deepEqual(budget.categories.fun, { budget: 150, spent: 100, left: 50, pct: 66, state: 'ok' });
-  assert.deepEqual(Object.keys(budget.categories).sort(), ['food', 'fun']);
+  assert.deepEqual(Object.keys(budget.categories), ['food', 'fun']);
 });
 
 test('g-AC5: 2026-09 has no budget', () => {
@@ -50,6 +50,7 @@ test('g-AC6: at least 12 October rows on 8 distinct days, all valid, unique ids'
   assert.ok(october.length >= 12, `${october.length} October rows`);
   assert.ok(new Set(october.map((e) => e.date)).size >= 8);
   for (const e of demoExpenses) assert.doesNotThrow(() => validate(e), e.id);
+  for (const { id, ...row } of october) assert.deepEqual(validate(row), row, id);
   assert.equal(new Set(demoExpenses.map((e) => e.id)).size, demoExpenses.length);
 });
 
