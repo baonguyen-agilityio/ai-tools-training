@@ -59,21 +59,21 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| c-AC1 | Overall line: spent / left / pct / state, existing fields unchanged | unit + API | |
-| c-AC2 | Capped category line with spend | unit | |
-| c-AC3 | Below 80 % (399.99 / 500) → `ok`, `pct: 79` | unit | |
-| c-AC4 | **Exactly 80 %** (400.00 / 500) → `warn`, `pct: 80` | unit | |
-| c-AC5 | **Exactly 100 %** (500.00 / 500) → `over`, `left: 0`, `pct: 100` | unit | |
-| c-AC6 | Above 100 % → `over`, negative `left`, `pct: 107` | unit | |
-| c-AC7 | Capped category with no spend → `spent: 0`, `ok` | unit | |
-| c-AC8 | **Category outside the four** counts toward overall only, absent from `budget.categories` | unit | |
-| c-AC9 | `budget.categories` in fixed order regardless of save order | unit | |
-| c-AC10 | **Copied from previous month**: unsaved Nov uses Oct budget with Nov expenses, `source: "2026-10"` | API | |
-| c-AC11 | **No budget set** (month before first saved) → `budget: null`, rest identical to today | API | |
-| c-AC12 | Integer `pct` (0.29 / 1.00 → 29) and float trap (3 × 0.10 vs 0.30 → `over`, `left: 0`) | unit | |
-| c-AC13 | CSV export identical with and without a budget | API | |
-| c-AC14 | Unparsable budgets file → `/api/summary` 500 | API | |
-| c-AC15 | MCP `monthly_summary` deep-equals `summaryWithBudget()` over the same temp files | MCP | |
+| c-AC1 | Overall line: spent / left / pct / state, existing fields unchanged | unit + API | done (REQ-002c) |
+| c-AC2 | Capped category line with spend | unit | done (REQ-002c) |
+| c-AC3 | Below 80 % (399.99 / 500) → `ok`, `pct: 79` | unit | done (REQ-002c) |
+| c-AC4 | **Exactly 80 %** (400.00 / 500) → `warn`, `pct: 80` | unit | done (REQ-002c) |
+| c-AC5 | **Exactly 100 %** (500.00 / 500) → `over`, `left: 0`, `pct: 100` | unit | done (REQ-002c) |
+| c-AC6 | Above 100 % → `over`, negative `left`, `pct: 107` | unit | done (REQ-002c) |
+| c-AC7 | Capped category with no spend → `spent: 0`, `ok` | unit | done (REQ-002c) |
+| c-AC8 | **Category outside the four** counts toward overall only, absent from `budget.categories` | unit | done (REQ-002c) |
+| c-AC9 | `budget.categories` in fixed order regardless of save order | unit | done (REQ-002c) |
+| c-AC10 | **Copied from previous month**: unsaved Nov uses Oct budget with Nov expenses, `source: "2026-10"` | API | done (REQ-002c) |
+| c-AC11 | **No budget set** (month before first saved) → `budget: null`, rest identical to today | API | done (REQ-002c) |
+| c-AC12 | Integer `pct` (0.29 / 1.00 → 29) and float trap (3 × 0.10 vs 0.30 → `over`, `left: 0`) | unit | done (REQ-002c) |
+| c-AC13 | CSV export identical with and without a budget | API | done (REQ-002c) |
+| c-AC14 | Unparsable budgets file → `/api/summary` 500 | API | done (REQ-002c) |
+| c-AC15 | MCP `monthly_summary` deep-equals `summaryWithBudget()` over the same temp files | MCP | done (REQ-002c) |
 
 ## REQ-002d — set budget UI
 

@@ -5,8 +5,8 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as store from './store.js';
-import { create, remove, list, summary, toCsv, MONTH_RE } from './expenses.js';
-import { validateBudget, effectiveBudget, toWire } from './budget.js';
+import { create, remove, list, toCsv, MONTH_RE } from './expenses.js';
+import { validateBudget, effectiveBudget, toWire, summaryWithBudget } from './budget.js';
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public/', import.meta.url)));
 const MIME = {
@@ -99,7 +99,7 @@ async function handleApi(req, res, url) {
 
   if (pathname === '/api/summary') {
     if (method !== 'GET') throw Object.assign(new Error('method not allowed'), { status: 405 });
-    return sendJson(res, 200, summary(store.load(), readMonth(searchParams)));
+    return sendJson(res, 200, summaryWithBudget(store.load(), store.loadBudgets(), readMonth(searchParams)));
   }
 
   if (pathname === '/api/export') {

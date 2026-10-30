@@ -191,3 +191,66 @@ test('toWire: converts cents back to currency', () => {
   });
   assert.equal(budget.BUDGET_CATEGORIES.join(','), 'food,transport,bills,fun');
 });
+
+// REQ-002c: budget status in the monthly summary. Fixtures are October 2026, budgets saved via validateBudget.
+const ex = (category, amount) => ({ id: `${category}-${amount}`, date: '2026-10-05', amount, category, note: '' });
+const DEMO = [ex('food', 450), ex('transport', 120.5), ex('bills', 620), ex('fun', 100), ex('coffee', 30)];
+const withBudget = (rows, categories, total = 1500) =>
+  budget.summaryWithBudget(rows, { '2026-10': budget.validateBudget({ total, categories }) }, '2026-10');
+
+test('c-AC1: overall line has spent/left/pct/state; total and byCategory unchanged', () => {
+  const s = withBudget(DEMO, { food: 500, fun: 150 });
+  assert.deepEqual({ month: s.month, total: s.total, byCategory: s.byCategory }, expenses.summary(DEMO, '2026-10'));
+  assert.equal(s.budget.source, '2026-10');
+  assert.deepEqual(s.budget.total, { budget: 1500, spent: 1320.5, left: 179.5, pct: 88, state: 'warn' });
+});
+
+test('c-AC2: capped category line with spend', () => {
+  assert.deepEqual(withBudget(DEMO, { food: 500 }).budget.categories.food, {
+    budget: 500, spent: 450, left: 50, pct: 90, state: 'warn',
+  });
+});
+
+test('c-AC3: below 80 % (399.99 of 500) → ok, pct 79', () => {
+  const food = withBudget([ex('food', 399.99)], { food: 500 }).budget.categories.food;
+  assert.deepEqual([food.state, food.pct], ['ok', 79]);
+});
+
+test('c-AC4: exactly 80 % (400.00 of 500) → warn, pct 80', () => {
+  const food = withBudget([ex('food', 400)], { food: 500 }).budget.categories.food;
+  assert.deepEqual([food.state, food.pct], ['warn', 80]);
+});
+
+test('c-AC5: exactly 100 % (500.00 of 500) → over, left 0, pct 100', () => {
+  const food = withBudget([ex('food', 500)], { food: 500 }).budget.categories.food;
+  assert.deepEqual([food.state, food.left, food.pct], ['over', 0, 100]);
+});
+
+test('c-AC6: above 100 % (535.50 of 500) → over, negative left, pct 107', () => {
+  const food = withBudget([ex('food', 535.5)], { food: 500 }).budget.categories.food;
+  assert.deepEqual([food.state, food.left, food.pct], ['over', -35.5, 107]);
+});
+
+test('c-AC7: capped category with no spend → spent 0, ok', () => {
+  assert.deepEqual(withBudget([ex('food', 10)], { fun: 150 }).budget.categories.fun, {
+    budget: 150, spent: 0, left: 150, pct: 0, state: 'ok',
+  });
+});
+
+test('c-AC8: category outside the four counts toward overall only', () => {
+  const s = withBudget([ex('coffee', 30)], { food: 500 });
+  assert.equal(s.byCategory.coffee, 30);
+  assert.ok(!('coffee' in s.budget.categories));
+  assert.equal(s.budget.total.spent, 30);
+});
+
+test('c-AC9: budget.categories in fixed order regardless of save order', () => {
+  assert.deepEqual(Object.keys(withBudget(DEMO, { fun: 150, food: 500 }).budget.categories), ['food', 'fun']);
+});
+
+test('c-AC12: integer pct (0.29 of 1.00 → 29) and float trap (3 × 0.10 of 0.30 → over, left 0)', () => {
+  assert.equal(withBudget([ex('food', 0.29)], { food: 1 }).budget.categories.food.pct, 29);
+  const rows = [0.1, 0.1, 0.1].map((a, i) => ({ ...ex('food', a), id: `t${i}` }));
+  const food = withBudget(rows, { food: 0.3 }).budget.categories.food;
+  assert.deepEqual([food.state, food.left], ['over', 0]);
+});

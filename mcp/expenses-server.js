@@ -10,12 +10,13 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import * as store from '../src/store.js';
-import { list, summary, MONTH_RE } from '../src/expenses.js';
+import { list, MONTH_RE } from '../src/expenses.js';
+import { summaryWithBudget } from '../src/budget.js';
 
 const TOOLS = [
   {
     name: 'monthly_summary',
-    description: 'Total and per-category totals for one month (YYYY-MM).',
+    description: 'Total, per-category totals and budget status for one month (YYYY-MM).',
     inputSchema: {
       type: 'object',
       properties: { month: { type: 'string', description: 'Month as YYYY-MM' } },
@@ -44,7 +45,13 @@ const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value,
 function monthlySummary(args) {
   const month = String(args.month ?? '');
   if (!MONTH_RE.test(month)) throw new McpError(ErrorCode.InvalidParams, 'month must be YYYY-MM');
-  return json(summary(store.load(), month));
+  try {
+    return json(summaryWithBudget(store.load(), store.loadBudgets(), month));
+  } catch (err) {
+    // Same contract as the HTTP 500: log the cause on stderr, never leak it to the caller.
+    console.error(err);
+    return { isError: true, content: [{ type: 'text', text: 'internal error' }] };
+  }
 }
 
 /** @param {Record<string, unknown>} args */

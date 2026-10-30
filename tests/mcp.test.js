@@ -1,24 +1,27 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { summaryWithBudget } from '../src/budget.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
-let dir, client;
+let dir, client, file, budgetsFile;
 
 before(async () => {
   dir = mkdtempSync(join(tmpdir(), 'expenses-mcp-'));
-  const file = join(dir, 'expenses.json');
+  file = join(dir, 'expenses.json');
+  budgetsFile = join(dir, 'budgets.json');
   copyFileSync(resolve(ROOT, 'data/seed.json'), file);
+  writeFileSync(budgetsFile, JSON.stringify({ '2026-02': { total: 30000, categories: { food: 5000 } } }));
   client = new Client({ name: 'test', version: '0.0.0' });
   await client.connect(
     new StdioClientTransport({
       command: process.execPath,
       args: [resolve(ROOT, 'mcp/expenses-server.js')],
-      env: { ...process.env, EXPENSES_FILE: file, BUDGETS_FILE: join(dir, 'budgets.json') },
+      env: { ...process.env, EXPENSES_FILE: file, BUDGETS_FILE: budgetsFile },
     }),
   );
 });
@@ -48,4 +51,27 @@ test('MCP server: search_expenses finds by note, rejects an empty q', async () =
     client.callTool({ name: 'search_expenses', arguments: { q: '   ' } }),
     /q must not be empty/,
   );
+});
+
+test('c-AC15: monthly_summary deep-equals summaryWithBudget over the same temp files', async () => {
+  const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+  const read = (p) => JSON.parse(readFileSync(p, 'utf8'));
+  const expected = summaryWithBudget(read(file), read(budgetsFile), '2026-02');
+  assert.ok(expected.budget);
+  assert.deepEqual(JSON.parse(res.content[0].text), expected);
+});
+
+test('c-AC15: unparsable BUDGETS_FILE → monthly_summary tool error; answers again once the file is reset', async () => {
+  const saved = readFileSync(budgetsFile, 'utf8');
+  writeFileSync(budgetsFile, '{not json');
+  try {
+    const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+    assert.equal(res.isError, true);
+    assert.equal(res.content[0].text, 'internal error');
+  } finally {
+    writeFileSync(budgetsFile, saved);
+  }
+  const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+  assert.ok(!res.isError);
+  assert.equal(JSON.parse(res.content[0].text).total, 315.29);
 });
