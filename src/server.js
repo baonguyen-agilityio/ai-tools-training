@@ -6,6 +6,7 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as store from './store.js';
 import { create, remove, list, summary, toCsv, MONTH_RE } from './expenses.js';
+import { validateBudget, effectiveBudget, toWire } from './budget.js';
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public/', import.meta.url)));
 const MIME = {
@@ -111,6 +112,26 @@ async function handleApi(req, res, url) {
       'content-disposition': `attachment; filename="expenses-${month}.csv"`,
     });
     return res.end(csv);
+  }
+
+  if (pathname === '/api/budget') {
+    if (method !== 'GET' && method !== 'PUT') {
+      throw Object.assign(new Error('method not allowed'), { status: 405 });
+    }
+    const month = readMonth(searchParams);
+    if (method === 'PUT') {
+      const input = await readJson(req);
+      let next;
+      try {
+        next = validateBudget(input);
+      } catch (err) {
+        throw Object.assign(err, { status: 400 });
+      }
+      // Full replace of this month only; inherited months are computed, never written.
+      store.saveBudgets({ ...store.loadBudgets(), [month]: next });
+    }
+    const { source, budget } = effectiveBudget(store.loadBudgets(), month);
+    return sendJson(res, 200, { month, source, budget: budget && toWire(budget) });
   }
 
   throw Object.assign(new Error('not found'), { status: 404 });

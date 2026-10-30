@@ -49,6 +49,20 @@ docs/       backlog tickets and project docs
 - Bug tickets live in `docs/backlog/`. Treat them as reports from a user, not as hints.
 - CI runs `npm test` and `npm run test:e2e` on every push.
 
+## HTTP API
+
+Amounts on the wire are currency numbers (`1500`, `179.5`); bad input is `400 {"error": "..."}`.
+
+| Method | Path | Does |
+|--------|------|------|
+| `GET` | `/api/expenses` | page of expenses newest first; `page`, `limit`, `category`, `q` |
+| `POST` | `/api/expenses` | create an expense `{ date, amount, category, note }` → `201` |
+| `DELETE` | `/api/expenses/:id` | delete one expense; `404` when absent |
+| `GET` | `/api/summary` | `?month=YYYY-MM` total and per-category totals |
+| `GET` | `/api/export` | `?month=YYYY-MM` CSV download |
+| `GET` | `/api/budget` | `?month=YYYY-MM` effective budget `{ month, source, budget }`; `source` is the saved month it comes from, `null` when none |
+| `PUT` | `/api/budget` | `?month=YYYY-MM` replace that month's budget `{ total, categories? }`; caps only for food, transport, bills, fun |
+
 ## MCP server
 
 `mcp/expenses-server.js` exposes the expense data to Claude Code over stdio (read-only, honours `EXPENSES_FILE`). It is registered in `.mcp.json` as `expenses`.

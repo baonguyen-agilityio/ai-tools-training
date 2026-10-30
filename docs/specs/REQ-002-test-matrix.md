@@ -41,19 +41,19 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| b-AC1 | GET saved month → 200, `source` = month, currency amounts | API | |
-| b-AC2 | GET unsaved later month → 200, `source` = earlier month | API | |
-| b-AC3 | GET month before first saved → 200, `source: null, budget: null` | API | |
-| b-AC4 | GET/PUT with bad or missing `month` → 400 `month must be YYYY-MM` | API | |
-| b-AC5 | PUT valid body → 200, stored in cents | API | |
-| b-AC6 | PUT replaces the month wholesale, other months intact | API | |
-| b-AC7 | PUT on an inherited month writes only that month | API | |
-| b-AC8 | PUT `{not json` → 400 `invalid JSON body` | API | |
-| b-AC9 | PUT `null` / `[]` / `5` → 400 `body must be an object`, nothing written | API | |
-| b-AC10 | PUT no total / total ≤ 0 / `0.004` / cap ≤ 0 / `categories: []` / cap `coffee` (keyed message) / duplicate keys → 400, nothing written | API | |
-| b-AC11 | POST/DELETE `/api/budget` → 405 | API | |
-| b-AC12 | Unparsable budgets file → 500, server keeps serving | API | |
-| b-AC13 | README “HTTP API” table has the seven routes | review | |
+| b-AC1 | GET saved month → 200, `source` = month, currency amounts | API | done (REQ-002b) |
+| b-AC2 | GET unsaved later month → 200, `source` = earlier month | API | done (REQ-002b) |
+| b-AC3 | GET month before first saved → 200, `source: null, budget: null` | API | done (REQ-002b) |
+| b-AC4 | GET/PUT with bad or missing `month` → 400 `month must be YYYY-MM` | API | done (REQ-002b) |
+| b-AC5 | PUT valid body → 200, stored in cents | API | done (REQ-002b) |
+| b-AC6 | PUT replaces the month wholesale, other months intact | API | done (REQ-002b) |
+| b-AC7 | PUT on an inherited month writes only that month | API | done (REQ-002b) |
+| b-AC8 | PUT `{not json` → 400 `invalid JSON body` | API | done (REQ-002b) |
+| b-AC9 | PUT `null` / `[]` / `5` → 400 `body must be an object`, nothing written | API | done (REQ-002b) |
+| b-AC10 | PUT no total / total ≤ 0 / `0.004` / cap ≤ 0 / `categories: []` / cap `coffee` (keyed message) / duplicate keys → 400, nothing written | API | done (REQ-002b) |
+| b-AC11 | POST/DELETE `/api/budget` → 405 | API | done (REQ-002b) |
+| b-AC12 | Unparsable budgets file → 500, server keeps serving | API | done (REQ-002b) |
+| b-AC13 | README “HTTP API” table has the seven routes | review | done (REQ-002b) |
 
 ## REQ-002c — status in summary
 

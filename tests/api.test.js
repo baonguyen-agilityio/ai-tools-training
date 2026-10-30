@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -170,4 +170,160 @@ test('unknown routes and methods', async () => {
   assert.equal((await api('/api/nope')).status, 404);
   assert.equal((await api('/api/summary', { method: 'POST' })).status, 405);
   assert.equal((await api('/missing.txt')).status, 404);
+});
+
+const BUDGET = { total: 1500, categories: { food: 500, fun: 150 } };
+const putBudget = (month, body) =>
+  api(`/api/budget?month=${month}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+const getBudget = async (month) => (await api(`/api/budget?month=${month}`)).json();
+
+test('b-AC1 GET /api/budget returns the saved month in currency', async () => {
+  await putBudget('2026-10', BUDGET);
+  const res = await api('/api/budget?month=2026-10');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { month: '2026-10', source: '2026-10', budget: BUDGET });
+});
+
+test('b-AC2 GET /api/budget inherits from the nearest earlier month', async () => {
+  await putBudget('2026-10', BUDGET);
+  const res = await api('/api/budget?month=2026-11');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { month: '2026-11', source: '2026-10', budget: BUDGET });
+});
+
+test('b-AC3 GET /api/budget before the first saved month is null', async () => {
+  await putBudget('2026-10', BUDGET);
+  const res = await api('/api/budget?month=2026-09');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { month: '2026-09', source: null, budget: null });
+});
+
+test('b-AC4 GET and PUT /api/budget reject a bad or missing month', async () => {
+  for (const query of ['?month=2026-13', '']) {
+    for (const method of ['GET', 'PUT']) {
+      const body = method === 'PUT' ? JSON.stringify(BUDGET) : undefined;
+      const res = await api(`/api/budget${query}`, { method, body });
+      assert.equal(res.status, 400, `${method} ${query}`);
+      assert.deepEqual(await res.json(), { error: 'month must be YYYY-MM' });
+    }
+  }
+  assert.deepEqual(store.loadBudgets(), {});
+});
+
+test('b-AC5 PUT /api/budget saves the month in cents', async () => {
+  const res = await putBudget('2026-10', BUDGET);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { month: '2026-10', source: '2026-10', budget: BUDGET });
+  assert.deepEqual(store.loadBudgets(), {
+    '2026-10': { total: 150000, categories: { food: 50000, fun: 15000 } },
+  });
+});
+
+test('b-AC6 PUT /api/budget replaces the month wholesale', async () => {
+  await putBudget('2026-10', BUDGET);
+  await putBudget('2026-12', { total: 2500, categories: { food: 900 } });
+  const res = await putBudget('2026-10', { total: 1600 });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).budget, { total: 1600, categories: {} });
+  assert.deepEqual(store.loadBudgets(), {
+    '2026-10': { total: 160000, categories: {} },
+    '2026-12': { total: 250000, categories: { food: 90000 } },
+  });
+});
+
+test('b-AC7 PUT on an inherited month writes only that month', async () => {
+  await putBudget('2026-10', BUDGET);
+  const res = await putBudget('2026-11', { total: 1800, categories: { bills: 700 } });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).source, '2026-11');
+  assert.deepEqual(Object.keys(store.loadBudgets()).sort(), ['2026-10', '2026-11']);
+  assert.deepEqual(await getBudget('2026-10'), { month: '2026-10', source: '2026-10', budget: BUDGET });
+});
+
+test('b-AC8 PUT /api/budget rejects malformed JSON', async () => {
+  const res = await putBudget('2026-10', '{not json');
+  assert.equal(res.status, 400);
+  assert.deepEqual(await res.json(), { error: 'invalid JSON body' });
+  assert.deepEqual(store.loadBudgets(), {});
+});
+
+test('b-AC9 PUT /api/budget rejects non-object bodies and writes nothing', async () => {
+  for (const body of ['null', '[]', '5']) {
+    const res = await putBudget('2026-10', body);
+    assert.equal(res.status, 400, body);
+    assert.deepEqual(await res.json(), { error: 'body must be an object' });
+  }
+  assert.deepEqual(store.loadBudgets(), {});
+});
+
+test('b-AC10 PUT /api/budget rejects invalid budgets and writes nothing', async () => {
+  await putBudget('2026-12', BUDGET);
+  const saved = store.loadBudgets();
+  const cases = [
+    [{ categories: { food: 500 } }, 'total must be a positive number'],
+    [{ total: 0 }, 'total must be a positive number'],
+    [{ total: -5 }, 'total must be a positive number'],
+    [{ total: 0.004 }, 'total must be a positive number'],
+    [{ total: 1500, categories: { food: 0 } }, 'food cap must be a positive number'],
+    [{ total: 1500, categories: { food: -1 } }, 'food cap must be a positive number'],
+    [{ total: 1500, categories: [] }, 'categories must be an object'],
+    [{ total: 1500, categories: { coffee: 10 } }, 'coffee: category must be one of food, transport, bills, fun'],
+    [{ total: 1500, categories: { food: 1, ' Food ': 2 } }, 'food: duplicate category'],
+  ];
+  for (const [body, error] of cases) {
+    const res = await putBudget('2026-10', body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+    assert.deepEqual(await res.json(), { error });
+  }
+  assert.deepEqual(store.loadBudgets(), saved);
+});
+
+test('b-AC10 PUT /api/budget ignores unknown top-level keys', async () => {
+  const res = await putBudget('2026-10', { total: 1500, note: 'x' });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).budget, { total: 1500, categories: {} });
+  assert.deepEqual(store.loadBudgets()['2026-10'], { total: 150000, categories: {} });
+});
+
+test('b-AC11 /api/budget rejects other methods with 405', async () => {
+  for (const method of ['POST', 'DELETE', 'PATCH']) {
+    const res = await api('/api/budget?month=2026-10', { method });
+    assert.equal(res.status, 405, method);
+  }
+});
+
+test('b-AC12 GET and PUT /api/budget return 500 on an unreadable budgets file and keep serving', async () => {
+  writeFileSync(process.env.BUDGETS_FILE, '{not json');
+  const res = await api('/api/budget?month=2026-10');
+  assert.equal(res.status, 500);
+  assert.deepEqual(await res.json(), { error: 'internal error' });
+  const put = await putBudget('2026-10', BUDGET);
+  assert.equal(put.status, 500);
+  assert.deepEqual(await put.json(), { error: 'internal error' });
+  assert.equal(readFileSync(process.env.BUDGETS_FILE, 'utf8'), '{not json');
+  store.resetFromSeed();
+  assert.equal((await api('/api/budget?month=2026-10')).status, 200);
+});
+
+test('b-AC13 README HTTP API table lists exactly the seven routes', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const section = readme.split(/^## HTTP API$/m)[1]?.split(/^## /m)[0] ?? '';
+  const rows = section
+    .split('\n')
+    .filter((line) => line.startsWith('|'))
+    .slice(2)
+    .map((line) => line.split('|').slice(1, 3).map((cell) => cell.trim().replaceAll('`', '')));
+  assert.deepEqual(rows, [
+    ['GET', '/api/expenses'],
+    ['POST', '/api/expenses'],
+    ['DELETE', '/api/expenses/:id'],
+    ['GET', '/api/summary'],
+    ['GET', '/api/export'],
+    ['GET', '/api/budget'],
+    ['PUT', '/api/budget'],
+  ]);
 });
