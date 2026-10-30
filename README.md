@@ -20,6 +20,7 @@ Install and run:
 npm install                      # only dev dep: @playwright/test
 npx playwright install chromium  # browser for e2e, once
 npm run seed                     # resets data/expenses.json + data/budgets.json from the seeds
+npm run seed:demo                # same, from data/demo-seed.json + data/demo-budgets.json (demo month)
 npm start                        # http://localhost:3000
 ```
 
@@ -46,6 +47,7 @@ docs/       backlog tickets and project docs
 ## Workflow
 
 - `data/expenses.json` and `data/budgets.json` are local state. Reset with `npm run seed`; tests point `EXPENSES_FILE` / `BUDGETS_FILE` at temp files.
+- Demo: `npm run seed:demo` loads October 2026 with a saved budget (total 1500, caps food 500 and fun 150): spent 1320.50, overall 88 % and food 90 % in amber, fun 66 %. Pick `2026-10` in the Monthly summary. `npm run seed` goes back to the test seeds.
 - Bug tickets live in `docs/backlog/`. Treat them as reports from a user, not as hints.
 - CI runs `npm test` and `npm run test:e2e` on every push.
 

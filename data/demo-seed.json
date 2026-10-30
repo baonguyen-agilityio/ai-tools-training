@@ -10,5 +10,20 @@
   { "id": "a9", "date": "2026-02-28", "amount": 200,   "category": "bills",     "note": "Internet" },
   { "id": "b1", "date": "2026-03-02", "amount": 22.3,  "category": "food",      "note": "Dinner" },
   { "id": "b2", "date": "2026-03-09", "amount": 18,    "category": "transport", "note": "Taxi" },
-  { "id": "b3", "date": "2026-03-15", "amount": 75,    "category": "fun",       "note": "Concert" }
+  { "id": "b3", "date": "2026-03-15", "amount": 75,    "category": "fun",       "note": "Concert" },
+  { "id": "o1",  "date": "2026-10-01", "amount": 420,   "category": "bills",     "note": "Office rent share" },
+  { "id": "o2",  "date": "2026-10-02", "amount": 85,    "category": "food",      "note": "Team lunch" },
+  { "id": "o3",  "date": "2026-10-03", "amount": 12.5,  "category": "coffee",    "note": "Coffee beans" },
+  { "id": "o4",  "date": "2026-10-05", "amount": 45,    "category": "transport", "note": "Grab to client" },
+  { "id": "o5",  "date": "2026-10-07", "amount": 62.4,  "category": "food",      "note": "Groceries" },
+  { "id": "o6",  "date": "2026-10-09", "amount": 60,    "category": "fun",       "note": "Bowling" },
+  { "id": "o7",  "date": "2026-10-10", "amount": 200,   "category": "bills",     "note": "Internet" },
+  { "id": "o8",  "date": "2026-10-12", "amount": 110.6, "category": "food",      "note": "Birthday dinner" },
+  { "id": "o9",  "date": "2026-10-14", "amount": 38.5,  "category": "transport", "note": "Taxi to airport" },
+  { "id": "o10", "date": "2026-10-16", "amount": 48,    "category": "food",      "note": "Snacks restock" },
+  { "id": "o11", "date": "2026-10-18", "amount": 17.5,  "category": "coffee",    "note": "Coffee machine filters" },
+  { "id": "o12", "date": "2026-10-20", "amount": 94,    "category": "food",      "note": "Catering for workshop" },
+  { "id": "o13", "date": "2026-10-22", "amount": 37,    "category": "transport", "note": "Bus passes" },
+  { "id": "o14", "date": "2026-10-24", "amount": 40,    "category": "fun",       "note": "Karaoke" },
+  { "id": "o15", "date": "2026-10-27", "amount": 50,    "category": "food",      "note": "Lunch" }
 ]

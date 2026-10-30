@@ -125,15 +125,15 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| g-AC1 | `npm run seed:demo` loads the demo pair; `seed.json` / `seed-budgets.json` unchanged vs `main` | review (`git diff main -- data/seed.json data/seed-budgets.json` empty) | |
-| g-AC2 | Demo October total 1320.50 and `byCategory` figures | unit (temp copies) | |
-| g-AC3 | Demo overall 88 % `warn`, food 90 % `warn` | unit | |
-| g-AC4 | Demo fun 66 % `ok`; `budget.categories` keys exactly `food`, `fun` | unit | |
-| g-AC5 | **Past month** (2026-09) → `budget: null` | unit | |
-| g-AC6 | ≥ 12 October rows on ≥ 8 distinct days, all pass `validate()`, unique ids | unit | |
-| g-AC7 | Non-October rows equal `data/seed.json` | unit | |
-| g-AC8 | No edits under `tests/` or `e2e/` except the new demo-file test; suites green | review + CI | |
-| g-AC9 | README documents `seed:demo` | review | |
+| g-AC1 | `npm run seed:demo` loads the demo pair; `seed.json` / `seed-budgets.json` unchanged vs `main` | review (`git diff main -- data/seed.json data/seed-budgets.json` empty) | done (REQ-002g) |
+| g-AC2 | Demo October total 1320.50 and `byCategory` figures | unit (temp copies) | done (REQ-002g) |
+| g-AC3 | Demo overall 88 % `warn`, food 90 % `warn` | unit | done (REQ-002g) |
+| g-AC4 | Demo fun 66 % `ok`; `budget.categories` keys exactly `food`, `fun` | unit | done (REQ-002g) |
+| g-AC5 | **Past month** (2026-09) → `budget: null` | unit | done (REQ-002g) |
+| g-AC6 | ≥ 12 October rows on ≥ 8 distinct days, all pass `validate()`, unique ids | unit | done (REQ-002g) |
+| g-AC7 | Non-October rows equal `data/seed.json` | unit | done (REQ-002g) |
+| g-AC8 | No edits under `tests/` or `e2e/` except the new demo-file test; suites green | review + CI | done (REQ-002g) |
+| g-AC9 | README documents `seed:demo` | review | done (REQ-002g) |
 
 ## Edge-case cross-reference
 
