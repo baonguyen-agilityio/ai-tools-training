@@ -339,7 +339,9 @@ test('c-AC1: GET /api/summary adds budget.total; total and byCategory unchanged'
   const body = await (await api('/api/summary?month=2026-10')).json();
   assert.equal(body.total, 1320.5);
   assert.deepEqual(body.byCategory, { bills: 1000, food: 320.5 });
+  assert.equal(body.budget.source, '2026-10');
   assert.deepEqual(body.budget.total, { budget: 1500, spent: 1320.5, left: 179.5, pct: 88, state: 'warn' });
+  assert.deepEqual(Object.keys(body.budget.categories), ['food', 'fun']);
 });
 
 test('c-AC10: unsaved month inherits the previous budget with its own expenses', async () => {

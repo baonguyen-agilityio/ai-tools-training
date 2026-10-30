@@ -60,3 +60,18 @@ test('c-AC15: monthly_summary deep-equals summaryWithBudget over the same temp f
   assert.ok(expected.budget);
   assert.deepEqual(JSON.parse(res.content[0].text), expected);
 });
+
+test('c-AC15: unparsable BUDGETS_FILE → monthly_summary tool error; answers again once the file is reset', async () => {
+  const saved = readFileSync(budgetsFile, 'utf8');
+  writeFileSync(budgetsFile, '{not json');
+  try {
+    const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+    assert.equal(res.isError, true);
+    assert.equal(res.content[0].text, 'internal error');
+  } finally {
+    writeFileSync(budgetsFile, saved);
+  }
+  const res = await client.callTool({ name: 'monthly_summary', arguments: { month: '2026-02' } });
+  assert.ok(!res.isError);
+  assert.equal(JSON.parse(res.content[0].text).total, 315.29);
+});
