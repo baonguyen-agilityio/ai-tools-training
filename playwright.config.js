@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const PORT = 3100;
-// Isolated data file so e2e never touches data/expenses.json.
+// Isolated data files so e2e never touches data/expenses.json or data/budgets.json.
 const EXPENSES_FILE = join(tmpdir(), 'expense-tracker-e2e.json');
+const BUDGETS_FILE = join(tmpdir(), 'expense-tracker-e2e-budgets.json');
 
 export default defineConfig({
   testDir: 'e2e',
@@ -16,7 +17,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run seed && npm start',
     port: PORT,
-    env: { PORT: String(PORT), EXPENSES_FILE },
+    env: { PORT: String(PORT), EXPENSES_FILE, BUDGETS_FILE },
     reuseExistingServer: false,
   },
 });

@@ -11,7 +11,8 @@
     "start": "node src/server.js",
     "test": "node --test tests/*.test.js",
     "test:e2e": "playwright test",
-    "seed": "node -e \"import('./src/store.js').then(s => s.resetFromSeed())\""
+    "seed": "node -e \"import('./src/store.js').then(s => s.resetFromSeed())\"",
+    "seed:demo": "node -e \"import('./src/store.js').then(s => s.resetFromSeed({ demo: true }))\""
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

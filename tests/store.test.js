@@ -8,6 +8,7 @@ let dir;
 before(() => {
   dir = mkdtempSync(join(tmpdir(), 'expenses-'));
   process.env.EXPENSES_FILE = join(dir, 'expenses.json');
+  process.env.BUDGETS_FILE = join(dir, 'budgets.json');
 });
 after(() => rmSync(dir, { recursive: true, force: true }));
 

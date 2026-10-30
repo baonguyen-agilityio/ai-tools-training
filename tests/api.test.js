@@ -9,6 +9,7 @@ let dir, server, base, store;
 before(async () => {
   dir = mkdtempSync(join(tmpdir(), 'expenses-api-'));
   process.env.EXPENSES_FILE = join(dir, 'expenses.json');
+  process.env.BUDGETS_FILE = join(dir, 'budgets.json');
   store = await import('../src/store.js');
   const { createServer } = await import('../src/server.js');
   server = createServer();

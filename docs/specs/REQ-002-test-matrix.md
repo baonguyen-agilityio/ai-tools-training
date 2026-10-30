@@ -13,29 +13,29 @@ implementing PR.
 
 | ID | Criterion | Level | Status |
 |----|-----------|-------|--------|
-| a-AC1 | `loadBudgets()` → `{}` when file missing, file not created | unit | |
-| a-AC2 | `saveBudgets()` / `loadBudgets()` round-trip in cents, honours `BUDGETS_FILE` | unit | |
-| a-AC3 | `effectiveBudget` returns the saved month itself | unit | |
-| a-AC4 | Inherits from nearest earlier saved month across a gap | unit | |
-| a-AC5 | Month before the first saved month → `null` / `null` | unit | |
-| a-AC6 | Empty budgets object → `null` / `null` | unit | |
-| a-AC7 | Keys not matching `MONTH_RE` ignored when resolving | unit | |
-| a-AC8 | `validateBudget` returns cents, accepts numeric strings | unit | |
-| a-AC9 | `total` missing / 0 / negative / NaN / text → `total must be a positive number` | unit | |
-| a-AC10 | Cap key `coffee` → `coffee: category must be one of …` (R38) | unit | |
-| a-AC11 | Cap key ` Food ` normalised to `food` | unit | |
-| a-AC12 | Cap 0 / negative / text → `<cat> cap must be a positive number` | unit | |
-| a-AC13 | `categories` null / array / string → `categories must be an object`; omitted → `{}` | unit | |
-| a-AC14 | Input null / array / number → `body must be an object` | unit | |
-| a-AC15 | Error precedence: total before categories; keys in insertion order, message names the key | unit | |
-| a-AC16 | `loadBudgets()` throws on unparsable JSON | unit | |
-| a-AC17 | `resetFromSeed()` and `resetFromSeed({ demo: true })` reset both temp files | unit | |
-| a-AC18 | Every suite sets `BUDGETS_FILE` to a temp path; `budgetsFile()` / `dataFile()` outside `data/` during tests | unit + review | |
-| a-AC19 | `.gitignore` lists `data/budgets.json` | review | |
-| a-AC20 | Hook blocks Bash / Write / Edit on `data/budgets.json`; `npm run seed`, `seed:demo` allowed | hook | |
-| a-AC21 | `monthCents()` exported; `summary()` output unchanged | unit (existing summary tests) | |
-| a-AC22 | Rounded cents value 0 (`0.004`) → rejected | unit | |
-| a-AC23 | Duplicate keys after normalising → `food: duplicate category` | unit | |
+| a-AC1 | `loadBudgets()` → `{}` when file missing, file not created | unit | done (REQ-002a) |
+| a-AC2 | `saveBudgets()` / `loadBudgets()` round-trip in cents, honours `BUDGETS_FILE` | unit | done (REQ-002a) |
+| a-AC3 | `effectiveBudget` returns the saved month itself | unit | done (REQ-002a) |
+| a-AC4 | Inherits from nearest earlier saved month across a gap | unit | done (REQ-002a) |
+| a-AC5 | Month before the first saved month → `null` / `null` | unit | done (REQ-002a) |
+| a-AC6 | Empty budgets object → `null` / `null` | unit | done (REQ-002a) |
+| a-AC7 | Keys not matching `MONTH_RE` ignored when resolving | unit | done (REQ-002a) |
+| a-AC8 | `validateBudget` returns cents, accepts numeric strings | unit | done (REQ-002a) |
+| a-AC9 | `total` missing / 0 / negative / NaN / text → `total must be a positive number` | unit | done (REQ-002a) |
+| a-AC10 | Cap key `coffee` → `coffee: category must be one of …` (R38) | unit | done (REQ-002a) |
+| a-AC11 | Cap key ` Food ` normalised to `food` | unit | done (REQ-002a) |
+| a-AC12 | Cap 0 / negative / text → `<cat> cap must be a positive number` | unit | done (REQ-002a) |
+| a-AC13 | `categories` null / array / string → `categories must be an object`; omitted → `{}` | unit | done (REQ-002a) |
+| a-AC14 | Input null / array / number → `body must be an object` | unit | done (REQ-002a) |
+| a-AC15 | Error precedence: total before categories; keys in insertion order, message names the key | unit | done (REQ-002a) |
+| a-AC16 | `loadBudgets()` throws on unparsable JSON | unit | done (REQ-002a) |
+| a-AC17 | `resetFromSeed()` and `resetFromSeed({ demo: true })` reset both temp files | unit | done (REQ-002a) |
+| a-AC18 | Every suite sets `BUDGETS_FILE` to a temp path; `budgetsFile()` / `dataFile()` outside `data/` during tests | unit + review | done (REQ-002a) |
+| a-AC19 | `.gitignore` lists `data/budgets.json` | review | done (REQ-002a) |
+| a-AC20 | Hook blocks Bash / Write / Edit on `data/budgets.json`; `npm run seed`, `seed:demo` allowed | hook | done (REQ-002a) |
+| a-AC21 | `monthCents()` exported; `summary()` output unchanged | unit (existing summary tests) | done (REQ-002a) |
+| a-AC22 | Rounded cents value 0 (`0.004`) → rejected | unit | done (REQ-002a) |
+| a-AC23 | Duplicate keys after normalising → `food: duplicate category` | unit | done (REQ-002a) |
 
 ## REQ-002b — budget API
 

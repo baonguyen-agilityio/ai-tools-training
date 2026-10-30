@@ -4,7 +4,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const DATA_FILE = /(^|[^\w.-])data\/expenses\.json(?![\w.-])/i;
+const DATA_FILE = /(^|[^\w.-])data\/(expenses|budgets)\.json(?![\w.-])/i;
 const READ_ONLY = new Set(['cat', 'less', 'more', 'head', 'tail', 'grep', 'egrep', 'fgrep', 'rg', 'wc', 'jq',
   'ls', 'stat', 'file', 'diff', 'cmp', 'shasum', 'md5', 'echo', 'printf']);
 const GIT_READ_ONLY = new Set(['diff', 'log', 'show', 'status', 'blame', 'ls-files']);
@@ -16,7 +16,7 @@ const GIT_VALUE_OPTS = new Set(['-C', '-c', '--git-dir', '--work-tree', '--names
 const COMMIT_VALUE_OPTS = 'mFcCt';
 
 const MSG = {
-  data: 'data/expenses.json is the real dev data file. Point EXPENSES_FILE at a temp file instead, or use `npm run seed` to reset it.',
+  data: 'data/expenses.json and data/budgets.json are the real dev data files. Point EXPENSES_FILE / BUDGETS_FILE at a temp file instead, or use `npm run seed` to reset them.',
   push: 'Force-pushing main/master is forbidden. Force-push only your own PR branch, with --force-with-lease.',
   noVerify: 'git commit --no-verify (-n) skips the hooks. Fix whatever the hook reports and commit normally.',
 };

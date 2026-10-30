@@ -82,12 +82,12 @@ export function list(expenses, { page = 1, limit = 10, category, q } = {}) {
 }
 
 /**
- * Total and per-category totals for one month.
+ * Total and per-category totals for one month, in integer cents.
  * @param {Expense[]} expenses
  * @param {string} month  YYYY-MM
- * @returns {{ month: string, total: number, byCategory: Record<string, number> }}
+ * @returns {{ cents: number, byCategory: Record<string, number> }}
  */
-export function summary(expenses, month) {
+export function monthCents(expenses, month) {
   // Compare the YYYY-MM prefix as text: parsing a date-only string yields UTC
   // midnight, and reading it back in local time shifts the 1st into the
   // previous month west of UTC.
@@ -95,12 +95,23 @@ export function summary(expenses, month) {
   // Sum in integer cents so float drift never reaches the result.
   let cents = 0;
   /** @type {Record<string, number>} */
-  const centsByCategory = {};
+  const byCategory = {};
   for (const e of inMonth) {
     const c = Math.round(e.amount * 100);
     cents += c;
-    centsByCategory[e.category] = (centsByCategory[e.category] ?? 0) + c;
+    byCategory[e.category] = (byCategory[e.category] ?? 0) + c;
   }
+  return { cents, byCategory };
+}
+
+/**
+ * Total and per-category totals for one month.
+ * @param {Expense[]} expenses
+ * @param {string} month  YYYY-MM
+ * @returns {{ month: string, total: number, byCategory: Record<string, number> }}
+ */
+export function summary(expenses, month) {
+  const { cents, byCategory: centsByCategory } = monthCents(expenses, month);
   /** @type {Record<string, number>} */
   const byCategory = {};
   for (const k in centsByCategory) byCategory[k] = centsByCategory[k] / 100;

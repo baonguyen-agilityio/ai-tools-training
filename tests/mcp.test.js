@@ -18,7 +18,7 @@ before(async () => {
     new StdioClientTransport({
       command: process.execPath,
       args: [resolve(ROOT, 'mcp/expenses-server.js')],
-      env: { ...process.env, EXPENSES_FILE: file },
+      env: { ...process.env, EXPENSES_FILE: file, BUDGETS_FILE: join(dir, 'budgets.json') },
     }),
   );
 });
