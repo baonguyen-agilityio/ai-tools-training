@@ -367,7 +367,7 @@ test.describe('REQ-002e summary status', () => {
     await expect(line(page, 'food')).toHaveText('food: 0.00 / 500.00 (Left: 500.00)');
   });
 
-  test('e-AC9 an empty month clears the summary, the budget form and the export link', async ({ page }) => {
+  test('e-AC10 an empty month clears the summary, the budget form and the export link', async ({ page }) => {
     // Fulfilled PUT: shows budget-saved without writing 2026-11 (R39).
     await page.route(/\/api\/budget\?/, (route) =>
       route.request().method() === 'PUT' ? route.fulfill({ json: {} }) : route.fallback());
@@ -392,7 +392,7 @@ test.describe('REQ-002e summary status', () => {
     await expect(page.getByTestId('export-link')).toHaveAttribute('href', '#');
   });
 
-  test('e-AC10 unspent capped categories follow the fixed order (R11)', async ({ page }) => {
+  test('e-AC11 unspent capped categories follow the fixed order (R11)', async ({ page }) => {
     // Caps PUT in scrambled insertion order; months with no expenses.
     const put = (month, categories) => page.request.put(`/api/budget?month=${month}`, { data: { total: 1000, categories } });
     expect((await put('2027-07', { bills: 200, transport: 100 })).ok()).toBe(true);
