@@ -20,7 +20,11 @@
 - `npm test` 55 → 56. Merged 2026-10-29T10:21:22Z as d9cf8ba.
 
 ## Plan mode and plan review
-- Each ticket started in plan mode; the plan was reviewed before approval, not approved on first read. TODO: one example of what plan review changed.
+- Each ticket started in plan mode; the plan was reviewed before approval, not approved on first read. What review changed:
+  - #34: plan changed so committed changes on the branch still trigger the Stop hook, not only dirty files (`git diff origin/main...HEAD` added to `git status --porcelain`).
+  - REQ-002a/b: review-level ACs became tests: a-AC19 (`.gitignore`) and b-AC13 (README HTTP API table lists exactly the seven routes).
+  - REQ-002e: `statusText()` returns only the `(Left: …)` / `(Over by …)` parenthetical. The session had picked the full line; the reviewer overrode it so REQ-002f could reuse the helper.
+  - REQ-002f: plan gained `noticeSeq`, and f-AC13 waits for a real response instead of a 50 ms settle.
 - PR bodies follow one shape: spec decisions cited (D-, R-numbers), `AC → test` table, red-first statement, verification counts.
 
 ## Tests first per AC
@@ -71,10 +75,11 @@
 
 ## Shared e2e port 3100
 - `playwright.config.js`: `PORT = 3100`, `reuseExistingServer: false`, fixed `$TMPDIR/expense-tracker-e2e*.json` data files. Two worktrees cannot run e2e at the same time: the second `webServer` cannot bind 3100, and both would share the same temp files.
-- TODO: what happened when two worktrees hit 3100 (collision seen, or runs serialised up front).
+- Parallel sessions were told to wait for the port (`lsof -i :3100` loop) and never change it or kill the other process. Runs serialised; none failed from a port clash.
 
 ## Merges
-- Squash-merges were run from a real terminal or the GitHub UI, not from the agent session; agent self-merge is blocked (same as #30 on Day 12).
+- Merges were done by the human, per repo rules (CLAUDE.md: "the human merges").
+- The Claude `!` bash mode cut off `gh pr merge` mid-run (seen on #36, #37, #39, #40, #41), so merges ran in a real terminal or the GitHub UI.
 
 ## Day 14 harden items
 - MCP `search_expenses` returns the raw `SyntaxError` as JSON-RPC `-32603` on an unreadable expenses file; `monthly_summary` already returns `isError` / `internal error` (#36 review).
