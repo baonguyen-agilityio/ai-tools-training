@@ -83,4 +83,4 @@ Final checkpoint.
 - `/review-checklist` on #52: https://github.com/baonguyen-agilityio/ai-tools-training/pull/52#issuecomment-6597704564
 - Demo artifact: https://claude.ai/artifact/DNzcVL1paigVE4Yb2EoVr4
 - Playbook artifact: https://claude.ai/artifact/SUKZkxhH3WXCAgPUe44uSt
-- Drive day-15: TODO (screenshots)
+- Drive day-15: https://drive.google.com/drive/folders/1_9moI1h4CR62pECNpadvdH4tvwXWGD-d (release-v1.0.0.png, issues-cross-review-and-retro.png)
