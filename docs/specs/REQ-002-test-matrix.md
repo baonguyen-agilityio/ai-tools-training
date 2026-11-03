@@ -89,6 +89,9 @@ implementing PR.
 | d-AC7 | Routed 400 (keyed category message) shown in `budget-error`, inputs keep values; hidden again on save start and month change | e2e | done (REQ-002d) |
 | d-AC8 | Clearing `fun` and saving omits it from the body; field empty after reload; `GET /api/budget` has no `fun` | e2e | done (REQ-002d) |
 | d-AC9 | `budget-form` bounding box ≤ 390 px at phone width | e2e (viewport 390 px) | done (REQ-002d) |
+| d-AC10 | `GET /api/budget?month=2026-12` routed to 500 after a month change → fields empty, `budget-error` visible, `budget-source` / `budget-saved` hidden, `budget-save` disabled, Enter sends no PUT, no `pageerror` (R43) | e2e | done (#51) |
+| d-AC10b | After that failure, picking `2026-11` (load succeeds) → baseline values, `budget-error` hidden, `budget-save` enabled (R43) | e2e | done (#51) |
+| d-AC10c | Failed `2026-12` load answered after switching to `2026-11` → dropped by `budgetSeq`: form, error and Save stay as `2026-11` loaded them, no `pageerror` (R43) | e2e | done (#51) |
 
 ## REQ-002e — status display
 

@@ -16,6 +16,7 @@ const budgetForm = $('#budget-form');
 const budgetSource = $('#budget-source');
 const budgetSaved = $('#budget-saved');
 const budgetError = $('#budget-error');
+const budgetSave = $('[data-testid="budget-save"]');
 const budgetNotice = $('#budget-notice');
 
 async function api(path, init) {
@@ -113,13 +114,21 @@ function renderNotice(category, summary) {
 async function loadBudget() {
   const month = summaryMonth.value;
   const seq = ++budgetSeq;
-  const { source, budget } = month ? await api(`/api/budget?month=${month}`) : {}; // empty picker clears the form
+  // Empty picker clears the form; a failed load clears it too and blocks Save, so stale values never reach another month (R43).
+  const result = month ? await api(`/api/budget?month=${month}`).catch((err) => ({ err })) : {};
   if (seq !== budgetSeq) return;
+  const { source, budget, err } = result;
   const f = budgetForm.elements;
   f.total.value = budget ? money(budget.total) : '';
   for (const cat of CAPS) f[cat].value = budget?.categories[cat] ? money(budget.categories[cat]) : '';
   budgetSource.textContent = `copied from ${source}, not saved`;
   budgetSource.hidden = !source || source === month;
+  if (err) {
+    budgetSaved.hidden = true;
+    budgetError.textContent = err.message;
+    budgetError.hidden = false;
+  } else if (budgetSave.disabled) budgetError.hidden = true; // clears a load error only, never a save error
+  budgetSave.disabled = Boolean(err);
 }
 
 function hideBudgetMessages() {

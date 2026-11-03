@@ -241,6 +241,75 @@ test.describe('REQ-002d set budget', () => {
     expect(box).not.toBeNull();
     expect(box.width).toBeLessThanOrEqual(390);
   });
+
+  const FIELDS = ['total', 'food', 'transport', 'bills', 'fun'];
+  const DEC_GET = /\/api\/budget\?month=2026-12$/;
+
+  // Answers GET 2026-12 with a 500 (after `gate`, if given); records every PUT.
+  async function failDecember(page, gate) {
+    const puts = [];
+    page.on('request', (r) => r.method() === 'PUT' && BUDGET_URL.test(r.url()) && puts.push(r.url()));
+    await page.route(DEC_GET, async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await gate;
+      return route.fulfill({ status: 500, json: { error: 'internal error' } });
+    });
+    return puts;
+  }
+
+  test('d-AC10 a failed load clears the form, shows the error and blocks Save (R43)', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err));
+    await page.getByTestId('summary-month').fill('2026-10');
+    await expectBaseline(page);
+    const puts = await failDecember(page);
+
+    await page.getByTestId('summary-month').fill('2026-12');
+    await expect(page.getByTestId('budget-error')).toBeVisible();
+    await expect(page.getByTestId('budget-error')).toHaveText('internal error');
+    for (const name of FIELDS) await expect(field(page, name)).toHaveValue('');
+    await expect(page.getByTestId('budget-source')).toBeHidden();
+    await expect(page.getByTestId('budget-saved')).toBeHidden();
+    await expect(page.getByTestId('budget-save')).toBeDisabled();
+
+    await field(page, 'total').fill('2500');
+    await field(page, 'total').press('Enter'); // implicit submission is blocked by the disabled button
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+    expect(puts).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('d-AC10b a later successful load re-enables Save and hides the error (R43)', async ({ page }) => {
+    await failDecember(page);
+    await page.getByTestId('summary-month').fill('2026-12');
+    await expect(page.getByTestId('budget-save')).toBeDisabled();
+
+    await page.getByTestId('summary-month').fill('2026-11');
+    await expectBaseline(page);
+    await expect(page.getByTestId('budget-error')).toBeHidden();
+    await expect(page.getByTestId('budget-save')).toBeEnabled();
+  });
+
+  test('d-AC10c a failed load answered after a month change is dropped (R43)', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err));
+    let release;
+    await failDecember(page, new Promise((r) => { release = r; }));
+
+    const decReq = page.waitForRequest(DEC_GET);
+    await page.getByTestId('summary-month').fill('2026-12');
+    const req = await decReq;
+    await page.getByTestId('summary-month').fill('2026-11');
+    await expectBaseline(page);
+
+    release();
+    await (await req.response()).finished();
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); // let the stale handler run
+    await expectBaseline(page);
+    await expect(page.getByTestId('budget-error')).toBeHidden();
+    await expect(page.getByTestId('budget-save')).toBeEnabled();
+    expect(errors).toEqual([]);
+  });
 });
 
 test.describe('REQ-002e summary status', () => {
