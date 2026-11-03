@@ -162,6 +162,8 @@ Export CSV
   `summary-category` `<li>` (R23). CSS colours only `warn` (`#8a5a00`) and `over` (`#b00020`,
   the existing `.error` red); `ok` has no rule (R25). Text carries the information too.
 - `budget-error` and `budget-saved` are hidden on month change and when a save starts.
+- Failed budget load: fields cleared, `budget-source` / `budget-saved` hidden, error in
+  `budget-error`, `budget-save` disabled until a later load succeeds (R43).
 - Test ids: `budget-form`, `budget-total`, `budget-cap-<category>`, `budget-save`, `budget-source`,
   `budget-saved`, `budget-error`, `summary-total` (existing, gains `data-state`),
   `summary-category` (existing, gains `data-state` when capped).
@@ -254,6 +256,7 @@ no test, e2e run or hook may touch `data/budgets.json`; money is integer cents e
 | R40 | d-2 (round 2) | d-AC8 asserts `budget-cap-fun` is empty after reload and `GET /api/budget?month=2026-10` has no `fun` cap. |
 | R41 | f-1 (round 2) | Post-add lines reuse the `loadSummary()` response when the expense month equals the picker month; a separate fetch only otherwise. f-AC11 dates the expense in a different month and aborts that separate fetch. |
 | R42 | QA#2 | The notice describes the last add only; any delete hides it. |
+| R43 | #51 | When `GET /api/budget` fails, the budget form is cleared, the error shows in `budget-error`, and Save is blocked (`budget-save` disabled) until a later load succeeds; a successful load re-enables it. A stale response for an older month is still dropped by `budgetSeq`. |
 
 Defaults applied without a number: a budget whose rounded cents value is ≤ 0 is rejected; two cap
 keys that normalise to the same category are a 400 (`food: duplicate category`); every test the
