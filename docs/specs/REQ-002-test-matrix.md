@@ -92,6 +92,7 @@ implementing PR.
 | d-AC10 | `GET /api/budget?month=2026-12` routed to 500 after a month change → fields empty, `budget-error` visible, `budget-source` / `budget-saved` hidden, `budget-save` disabled, Enter sends no PUT, no `pageerror` (R43) | e2e | done (#51) |
 | d-AC10b | After that failure, picking `2026-11` (load succeeds) → baseline values, `budget-error` hidden, `budget-save` enabled (R43) | e2e | done (#51) |
 | d-AC10c | Failed `2026-12` load answered after switching to `2026-11` → dropped by `budgetSeq`: form, error and Save stay as `2026-11` loaded them, no `pageerror` (R43) | e2e | done (#51) |
+| d-AC10d | Save on `2027-09` succeeds, its follow-up `GET /api/budget` routed to 500 → fields empty, `budget-error` visible, `budget-saved` hidden, `budget-save` disabled, no `pageerror` (R43) | e2e | done (#51) |
 
 ## REQ-002e — status display
 

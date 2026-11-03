@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // Month invariant (R21, R39): saving tests use months >= 2027-01 (AC8 re-saves the 2026-10 baseline,
 // restored by beforeEach), inherited reads and tests that never write (AC6, AC7) use 2026-11 / 2026-12,
 // "no budget" uses 2026-01. Exception: d-AC5c saves and reads inheritance on 2027-04..06, e-AC11 saves
-// 2027-07 / 2027-08; no other test uses 2027-04..08.
+// 2027-07 / 2027-08; no other test uses 2027-04..08. d-AC10d saves 2027-09.
 const BASELINE = { total: 1500, categories: { food: 500, fun: 150 } };
 const BUDGET_URL = /\/api\/budget\?/;
 
@@ -274,7 +274,8 @@ test.describe('REQ-002d set budget', () => {
 
     await field(page, 'total').fill('2500');
     await field(page, 'total').press('Enter'); // implicit submission is blocked by the disabled button
-    await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+    // A submit would have fired its PUT before this later request completes its round-trip.
+    await page.evaluate(() => fetch('/api/budget?month=2026-11'));
     expect(puts).toEqual([]);
     expect(errors).toEqual([]);
   });
@@ -308,6 +309,31 @@ test.describe('REQ-002d set budget', () => {
     await expectBaseline(page);
     await expect(page.getByTestId('budget-error')).toBeHidden();
     await expect(page.getByTestId('budget-save')).toBeEnabled();
+    expect(errors).toEqual([]);
+  });
+
+  test('d-AC10d a failed reload after a successful save clears the form and blocks Save (R43)', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err));
+    let saved = false;
+    // Only the GET that follows the PUT fails; the load on picking the month passes.
+    await page.route(/\/api\/budget\?month=2027-09$/, (route) => {
+      if (route.request().method() === 'PUT') { saved = true; return route.fallback(); }
+      if (!saved) return route.fallback();
+      return route.fulfill({ status: 500, json: { error: 'internal error' } });
+    });
+
+    const loaded = page.waitForResponse((r) => r.request().method() === 'GET' && /month=2027-09$/.test(r.url()));
+    await page.getByTestId('summary-month').fill('2027-09');
+    await (await loaded).finished(); // the inherited values depend on earlier saves, so wait for the load itself
+    await field(page, 'total').fill('1600');
+    await page.getByTestId('budget-save').click();
+
+    await expect(page.getByTestId('budget-error')).toBeVisible();
+    await expect(page.getByTestId('budget-error')).toHaveText('internal error');
+    for (const name of FIELDS) await expect(field(page, name)).toHaveValue('');
+    await expect(page.getByTestId('budget-saved')).toBeHidden();
+    await expect(page.getByTestId('budget-save')).toBeDisabled();
     expect(errors).toEqual([]);
   });
 });
